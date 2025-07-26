@@ -1,0 +1,29 @@
+[server]
+# Disable file watching to prevent inotify errors on Streamlit Cloud
+fileWatcherType = "none"
+
+# Port configuration
+port = 8501
+
+# Disable CORS protection (safe for Streamlit Cloud)
+enableCORS = false
+
+# Disable WebSocket compression
+enableWebsocketCompression = false
+
+[browser]
+# Disable gathering usage stats
+gatherUsageStats = false
+
+# Server address for browser
+serverAddress = "localhost"
+
+[runner]
+# Magic commands
+magicEnabled = false
+
+# Install tracer
+installTracer = false
+
+# Fix matplotlib backend
+fixMatplotlib = true
