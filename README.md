@@ -66,10 +66,65 @@ flake8 .
 3. Deploy from your GitHub repository
 4. Add your OpenAI API key in the Streamlit secrets management
 
-### Environment Variables
+### Configuration
 
-Required secrets:
+### Required Secrets
 - `OPENAI_API_KEY`: Your OpenAI API key
+
+### Optional Configuration
+
+The app supports extensive configuration through both Streamlit secrets and environment variables. You can customize behavior by:
+
+1. **Using Streamlit secrets** (recommended for Streamlit Cloud):
+   - Add configuration sections to your `.streamlit/secrets.toml`
+   - See `.streamlit/secrets.toml.example` for all options
+
+2. **Using environment variables**:
+   - Prefix any config with `THERABOT_`
+   - Example: `THERABOT_RATE_LIMIT_REQUESTS=30`
+
+#### Available Configuration Options
+
+| Category | Config Key | Default | Description |
+|----------|------------|---------|-------------|
+| **Rate Limiting** | | | |
+| | `rate_limit.requests_per_hour` | 20 | Max requests per hour |
+| | `rate_limit.window_hours` | 1 | Time window in hours |
+| **AI Model** | | | |
+| | `model.name` | gpt-4o-mini | OpenAI model to use |
+| | `model.temperature` | 0.7 | Response randomness (0-1) |
+| | `model.max_tokens` | 100 | Max response length |
+| | `model.stream` | true | Enable streaming |
+| **Guardrails** | | | |
+| | `guardrails.max_words` | 50 | Max words per response |
+| | `guardrails.max_sentences` | 3 | Max sentences per response |
+| | `guardrails.require_question` | true | End with question |
+| | `guardrails.max_retries` | 3 | Max regeneration attempts |
+| **UI** | | | |
+| | `ui.page_title` | Mental Health Support Bot | Browser tab title |
+| | `ui.chat_placeholder` | How are you feeling today? | Input placeholder |
+| **Moderation** | | | |
+| | `moderation.high_risk_categories` | self-harm,self-harm/intent,self-harm/instructions | Comma-separated list |
+
+### Example Configuration
+
+```toml
+# .streamlit/secrets.toml
+OPENAI_API_KEY = "sk-..."
+
+[rate_limit]
+requests_per_hour = 30
+window_hours = 1
+
+[model]
+name = "gpt-4"
+temperature = 0.8
+max_tokens = 150
+
+[guardrails]
+max_words = 75
+max_sentences = 4
+```
 
 ## Project Structure
 

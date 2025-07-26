@@ -1,5 +1,7 @@
 from typing import Any, Dict, Tuple
 
+from config import config
+
 
 def moderate_content(text: str, client: Any) -> Tuple[bool, Dict[str, Any]]:
     """
@@ -13,11 +15,7 @@ def moderate_content(text: str, client: Any) -> Tuple[bool, Dict[str, Any]]:
         is_flagged = result.flagged
 
         categories = result.categories
-        high_risk_categories = [
-            "self-harm",
-            "self-harm/intent",
-            "self-harm/instructions",
-        ]
+        high_risk_categories = config.MODERATION_HIGH_RISK_CATEGORIES
 
         for category in high_risk_categories:
             if hasattr(categories, category.replace("/", "_")) and getattr(

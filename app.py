@@ -4,27 +4,18 @@ from datetime import datetime, timedelta
 import openai
 import streamlit as st
 
+from config import config
 from guardrails import regenerate_if_needed
 from moderation import moderate_content
 
 st.set_page_config(
-    page_title="Mental Health Support Bot", page_icon="🧠", layout="centered"
+    page_title=config.PAGE_TITLE, page_icon=config.PAGE_ICON, layout=config.PAGE_LAYOUT
 )
 
-st.markdown(
-    """
-<div style='background-color: #fff3cd; padding: 1rem; border-radius: 0.5rem;
-margin-bottom: 1rem;'>
-⚠️ <strong>Important Notice</strong>: This is a non-clinical support tool for
-general mental wellness. If you're experiencing a crisis, please contact
-emergency services (911) or a crisis hotline immediately.
-</div>
-""",
-    unsafe_allow_html=True,
-)
+st.markdown(config.SAFETY_BANNER_HTML, unsafe_allow_html=True)
 
-st.title("Mental Health Support Bot 🧠")
-st.caption("A supportive companion for youth mental wellness")
+st.title(config.APP_TITLE)
+st.caption(config.APP_CAPTION)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -34,9 +25,9 @@ if "rate_limit" not in st.session_state:
 
 
 def check_rate_limit(ip_address="default"):
-    """Check if user has exceeded rate limit (20 requests per hour)"""
+    """Check if user has exceeded rate limit"""
     current_time = datetime.now()
-    hour_ago = current_time - timedelta(hours=1)
+    hour_ago = current_time - timedelta(hours=config.RATE_LIMIT_WINDOW_HOURS)
 
     st.session_state.rate_limit[ip_address] = [
         timestamp
@@ -44,7 +35,7 @@ def check_rate_limit(ip_address="default"):
         if timestamp > hour_ago
     ]
 
-    if len(st.session_state.rate_limit[ip_address]) >= 20:
+    if len(st.session_state.rate_limit[ip_address]) >= config.RATE_LIMIT_REQUESTS:
         return False
 
     st.session_state.rate_limit[ip_address].append(current_time)
@@ -54,7 +45,7 @@ def check_rate_limit(ip_address="default"):
 def load_system_prompt():
     """Load system prompt from file"""
     try:
-        with open("system_prompt.txt", "r") as f:
+        with open(config.SYSTEM_PROMPT_FILE, "r") as f:
             return f.read().strip()
     except FileNotFoundError:
         return """You are a supportive mental health companion for youth.
@@ -64,7 +55,7 @@ def load_system_prompt():
 
 # Check for API key before initializing client
 if "OPENAI_API_KEY" not in st.secrets:
-    st.error("⚠️ OpenAI API key not found. Please add it to Streamlit Cloud secrets.")
+    st.error(config.ERROR_API_KEY)
     st.info(
         "Go to your app settings on Streamlit Cloud and add:\n"
         "- Key: `OPENAI_API_KEY`\n"
@@ -78,19 +69,14 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
-if prompt := st.chat_input("How are you feeling today?"):
+if prompt := st.chat_input(config.CHAT_PLACEHOLDER):
     if not check_rate_limit():
-        st.error(
-            "You've reached the hourly message limit (20). Please try again later."
-        )
+        st.error(config.ERROR_RATE_LIMIT)
     else:
         is_safe, moderation_result = moderate_content(prompt, client)
 
         if not is_safe:
-            st.error(
-                "I noticed your message might contain sensitive content. "
-                "Let's focus on constructive support."
-            )
+            st.error(config.ERROR_MODERATION)
         else:
             st.session_state.messages.append({"role": "user", "content": prompt})
             with st.chat_message("user"):
@@ -106,11 +92,11 @@ if prompt := st.chat_input("How are you feeling today?"):
 
                 try:
                     stream = client.chat.completions.create(
-                        model="gpt-4o-mini",
+                        model=config.MODEL_NAME,
                         messages=messages,
-                        temperature=0.7,
-                        max_tokens=100,
-                        stream=True,
+                        temperature=config.MODEL_TEMPERATURE,
+                        max_tokens=config.MODEL_MAX_TOKENS,
+                        stream=config.MODEL_STREAM,
                     )
 
                     for chunk in stream:
@@ -128,4 +114,4 @@ if prompt := st.chat_input("How are you feeling today?"):
                     )
 
                 except Exception as e:
-                    st.error(f"An error occurred: {str(e)}")
+                    st.error(config.ERROR_GENERIC.format(error=str(e)))

@@ -1,6 +1,8 @@
 import re
 from typing import Any, Dict, List, Tuple
 
+from config import config
+
 
 def count_words(text: str) -> int:
     """Count words in text"""
@@ -27,21 +29,26 @@ def validate_response(response: str) -> Tuple[bool, List[str]]:
     violations = []
 
     word_count = count_words(response)
-    if word_count > 50:
-        violations.append(f"Response has {word_count} words (max 50)")
+    if word_count > config.GUARDRAILS_MAX_WORDS:
+        violations.append(
+            f"Response has {word_count} words (max {config.GUARDRAILS_MAX_WORDS})"
+        )
 
     sentence_count = count_sentences(response)
-    if sentence_count > 3:
-        violations.append(f"Response has {sentence_count} sentences (max 3)")
+    if sentence_count > config.GUARDRAILS_MAX_SENTENCES:
+        violations.append(
+            f"Response has {sentence_count} sentences "
+            f"(max {config.GUARDRAILS_MAX_SENTENCES})"
+        )
 
-    if not ends_with_question(response):
+    if config.GUARDRAILS_REQUIRE_QUESTION and not ends_with_question(response):
         violations.append("Response must end with a follow-up question")
 
     return len(violations) == 0, violations
 
 
 def regenerate_if_needed(
-    response: str, messages: List[Dict[str, Any]], client: Any, max_attempts: int = 3
+    response: str, messages: List[Dict[str, Any]], client: Any, max_attempts: int = None
 ) -> str:
     """
     Regenerate response if it violates guardrails.
@@ -52,8 +59,11 @@ def regenerate_if_needed(
     if is_valid:
         return response
 
+    if max_attempts is None:
+        max_attempts = config.GUARDRAILS_MAX_RETRIES
+
     attempt = 1
-    temperature = 0.5
+    temperature = config.GUARDRAILS_RETRY_TEMPERATURE
 
     while attempt <= max_attempts:
         try:
@@ -63,17 +73,22 @@ def regenerate_if_needed(
                     "content": (
                         f"Previous response violated these rules: "
                         f"{', '.join(violations)}. Generate a new response "
-                        f"that is under 50 words, has max 3 sentences, "
-                        f"and ends with a follow-up question."
+                        f"that is under {config.GUARDRAILS_MAX_WORDS} words, "
+                        f"has max {config.GUARDRAILS_MAX_SENTENCES} sentences"
+                        + (
+                            ", and ends with a follow-up question."
+                            if config.GUARDRAILS_REQUIRE_QUESTION
+                            else "."
+                        )
                     ),
                 }
             ]
 
             completion = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=config.MODEL_NAME,
                 messages=messages_with_feedback,
                 temperature=temperature,
-                max_tokens=100,
+                max_tokens=config.MODEL_MAX_TOKENS,
             )
 
             new_response = completion.choices[0].message.content
@@ -82,7 +97,7 @@ def regenerate_if_needed(
             if is_valid:
                 return new_response
 
-            temperature -= 0.2
+            temperature -= config.GUARDRAILS_TEMPERATURE_DECREMENT
             attempt += 1
 
         except Exception as e:
