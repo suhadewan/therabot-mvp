@@ -21,9 +21,3 @@ serverAddress = "localhost"
 [runner]
 # Magic commands
 magicEnabled = false
-
-# Install tracer
-installTracer = false
-
-# Fix matplotlib backend
-fixMatplotlib = true

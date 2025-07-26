@@ -62,7 +62,17 @@ def load_system_prompt():
         Keep responses under 50 words and end with a follow-up question."""
 
 
-client = openai.OpenAI(api_key=st.secrets.get("OPENAI_API_KEY"))
+# Check for API key before initializing client
+if "OPENAI_API_KEY" not in st.secrets:
+    st.error("⚠️ OpenAI API key not found. Please add it to Streamlit Cloud secrets.")
+    st.info(
+        "Go to your app settings on Streamlit Cloud and add:\n"
+        "- Key: `OPENAI_API_KEY`\n"
+        "- Value: Your OpenAI API key"
+    )
+    st.stop()
+
+client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
