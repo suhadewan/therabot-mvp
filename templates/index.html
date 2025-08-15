@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mental Health Support Bot</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="description" content="A supportive mental health companion for youth">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Mental Health Bot">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/icon-16x16.png">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+    
+    <!-- Styles -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            text-align: center;
+            color: white;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .safety-banner {
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
+            margin: 1rem;
+            padding: 1rem;
+            border-radius: 12px;
+            color: #92400e;
+            font-size: 0.9rem;
+        }
+
+        .safety-banner strong {
+            color: #78350f;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .messages {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: #667eea;
+            color: white;
+        }
+
+        .message.assistant .message-avatar {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .message-content {
+            background: #f8fafc;
+            padding: 0.75rem 1rem;
+            border-radius: 18px;
+            max-width: 70%;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+        }
+
+        .message.crisis .message-content {
+            background: #fef2f2;
+            border: 2px solid #dc2626;
+            color: #991b1b;
+        }
+
+        .message.safety .message-content {
+            background: #eff6ff;
+            border: 2px solid #2563eb;
+            color: #1e40af;
+        }
+
+        .input-container {
+            padding: 1rem;
+            background: white;
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .message-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+        }
+
+        .send-button:hover {
+            background: #5a67d8;
+        }
+
+        .send-button:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 0.75rem 1rem;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        .crisis-resources {
+            background: #fef2f2;
+            border: 2px solid #dc2626;
+            margin: 1rem;
+            padding: 1rem;
+            border-radius: 12px;
+            color: #991b1b;
+        }
+
+        .crisis-resources h3 {
+            color: #dc2626;
+            margin-bottom: 0.5rem;
+        }
+
+        .crisis-resources a {
+            color: #dc2626;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .crisis-resources a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .chat-container {
+                border-radius: 0;
+                margin: 0;
+            }
+            
+            .input-container {
+                border-radius: 0;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+        }
+
+        /* Install prompt */
+        .install-prompt {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #667eea;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 25px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1000;
+        }
+
+        .install-prompt button {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            margin-left: 1rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧠 Mental Health Support Bot</h1>
+        <p>A supportive companion for youth mental wellness</p>
+    </div>
+
+    <div class="safety-banner">
+        ⚠️ <strong>Important Notice</strong>: This is a non-clinical support tool for general mental wellness. If you're experiencing a crisis, please contact emergency services (911) or a crisis hotline immediately.
+    </div>
+
+    <div class="chat-container">
+        <div class="messages" id="messages">
+            <div class="message assistant">
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    Hi there! I'm here to listen and support you. How are you feeling today?
+                </div>
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typing">
+            <i class="fas fa-circle"></i> Bot is typing...
+        </div>
+
+        <div class="input-container">
+            <div class="input-group">
+                <input type="text" class="message-input" id="messageInput" placeholder="How are you feeling today?" maxlength="500">
+                <button class="send-button" id="sendButton" onclick="sendMessage()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="install-prompt" id="installPrompt">
+        <span>Install this app for a better experience</span>
+        <button onclick="installApp()">Install</button>
+    </div>
+
+    <script>
+        let deferredPrompt;
+        let userId = 'user_' + Math.random().toString(36).substr(2, 9);
+
+        // PWA Install Prompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installPrompt').style.display = 'block';
+        });
+
+        async function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('User accepted the install prompt');
+                }
+                deferredPrompt = null;
+                document.getElementById('installPrompt').style.display = 'none';
+            }
+        }
+
+        // Chat functionality
+        const messagesContainer = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const typingIndicator = document.getElementById('typing');
+
+        function addMessage(content, role, type = 'normal') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role} ${type}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = role === 'user' ? '👤' : '🤖';
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            messageContent.innerHTML = content;
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(messageContent);
+            messagesContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function showTyping() {
+            typingIndicator.style.display = 'block';
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function hideTyping() {
+            typingIndicator.style.display = 'none';
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, 'user');
+            messageInput.value = '';
+            sendButton.disabled = true;
+
+            // Show typing indicator
+            showTyping();
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    addMessage(`Error: ${data.error}`, 'assistant', 'error');
+                } else {
+                    // Add bot response
+                    addMessage(data.response, 'assistant', data.type);
+                    
+                    // Show crisis resources if needed
+                    if (data.type === 'crisis' || data.type === 'safety_concern') {
+                        showCrisisResources();
+                    }
+                }
+            } catch (error) {
+                addMessage('Sorry, something went wrong. Please try again.', 'assistant', 'error');
+            } finally {
+                hideTyping();
+                sendButton.disabled = false;
+                messageInput.focus();
+            }
+        }
+
+        function showCrisisResources() {
+            const resourcesDiv = document.createElement('div');
+            resourcesDiv.className = 'crisis-resources';
+            resourcesDiv.innerHTML = `
+                <h3>🚨 Crisis Support Available</h3>
+                <p><strong>AASRA Helpline:</strong> 022 2754 6669</p>
+                <p><strong>National Crisis Helpline:</strong> 1800-599-0019</p>
+                <p><strong>Emergency Services:</strong> 112</p>
+                <p><strong>Police:</strong> 100</p>
+            `;
+            messagesContainer.appendChild(resourcesDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Enter key to send
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Focus input on load
+        messageInput.focus();
+
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch((registrationError) => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
+</body>
+</html> 

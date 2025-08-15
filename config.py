@@ -157,11 +157,30 @@ class Config:
         "THERABOT_SAFETY_BANNER",
         st.secrets.get("ui", {}).get(
             "safety_banner",
-            """<div style='background-color: #fff3cd; padding: 1rem;
-border-radius: 0.5rem; margin-bottom: 1rem;'>
-⚠️ <strong>Important Notice</strong>: This is a non-clinical support tool for
+            """<div style='background-color: #fef3c7; border: 2px solid #f59e0b; padding: 1rem;
+border-radius: 0.5rem; margin-bottom: 1rem; color: #92400e; font-weight: 500;'>
+⚠️ <strong style='color: #78350f;'>Important Notice</strong>: This is a non-clinical support tool for
 general mental wellness. If you're experiencing a crisis, please contact
 emergency services (911) or a crisis hotline immediately.
+</div>""",
+        ),
+    )
+
+    # Crisis Hotlines Banner
+    CRISIS_HOTLINES_HTML = os.getenv(
+        "THERABOT_CRISIS_HOTLINES",
+        st.secrets.get("ui", {}).get(
+            "crisis_hotlines",
+            """<div style='background-color: #dbeafe; border: 2px solid #2563eb; padding: 1rem;
+border-radius: 0.5rem; margin-bottom: 1rem; color: #1e40af; font-weight: 500;'>
+📞 <strong style='color: #1e3a8a;'>24/7 Mental Health Helplines (India)</strong><br><br>
+<strong>Mobile Mental Health Unit (MMHU) - Delhi:</strong><br>
+• Landline: 011-22592818<br>
+• Mobile: 9868396910 / 9868396911<br><br>
+<strong>Kiran - National Mental Health Helpline:</strong><br>
+• Toll-free: 1800-599-0019<br><br>
+<strong>Tele Manas - Ministry of Health:</strong><br>
+• Toll-free: 1800-891-4416
 </div>""",
         ),
     )

@@ -4,3 +4,8 @@ pytest==7.4.3
 flake8==6.1.0
 black==23.12.1
 isort==5.13.2
+flask==2.3.3
+twilio==8.10.0
+python-dotenv==1.0.0
+redis==5.0.1
+gunicorn==21.2.0

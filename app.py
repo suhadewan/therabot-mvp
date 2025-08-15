@@ -7,6 +7,8 @@ import streamlit as st
 from config import config
 from guardrails import regenerate_if_needed
 from moderation import moderate_content
+from crisis_detection import detect_crisis_keywords
+from llm_safety_check import analyze_content_with_llm, get_llm_detected_response
 
 st.set_page_config(
     page_title=config.PAGE_TITLE, page_icon=config.PAGE_ICON, layout=config.PAGE_LAYOUT
@@ -16,6 +18,21 @@ st.markdown(config.SAFETY_BANNER_HTML, unsafe_allow_html=True)
 
 st.title(config.APP_TITLE)
 st.caption(config.APP_CAPTION)
+
+# Add crisis hotlines to sidebar
+with st.sidebar:
+    st.markdown("### 📞 Emergency Helplines")
+    st.markdown(config.CRISIS_HOTLINES_HTML, unsafe_allow_html=True)
+    
+    # Add some spacing and additional resources
+    # st.markdown("---")
+    st.markdown("### 🆘 In Crisis?")
+    st.markdown("""
+    - **Emergency Services**: 112
+    - **Police**: 100
+    - **Ambulance**: 102
+    """)
+
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -73,45 +90,83 @@ if prompt := st.chat_input(config.CHAT_PLACEHOLDER):
     if not check_rate_limit():
         st.error(config.ERROR_RATE_LIMIT)
     else:
-        is_safe, moderation_result = moderate_content(prompt, client)
-
-        if not is_safe:
-            st.error(config.ERROR_MODERATION)
-        else:
+        # Check for crisis keywords first
+        is_crisis, crisis_response = detect_crisis_keywords(prompt)
+        
+        if is_crisis:
             st.session_state.messages.append({"role": "user", "content": prompt})
             with st.chat_message("user"):
                 st.write(prompt)
-
-            messages = [
-                {"role": "system", "content": load_system_prompt()}
-            ] + st.session_state.messages
-
+            
             with st.chat_message("assistant"):
-                message_placeholder = st.empty()
-                full_response = ""
+                st.warning("🚨 Crisis detected - Immediate support resources:")
+                st.markdown(crisis_response)
+            
+            st.session_state.messages.append(
+                {"role": "assistant", "content": crisis_response}
+            )
+        else:
+            # Additional LLM-based safety check for nuanced detection
+            is_llm_concerning, concern_type, analysis = analyze_content_with_llm(prompt, client)
+            
+            if is_llm_concerning:
+                st.session_state.messages.append({"role": "user", "content": prompt})
+                with st.chat_message("user"):
+                    st.write(prompt)
+                
+                with st.chat_message("assistant"):
+                    st.warning(f"⚠️ Safety concern detected - Support available:")
+                    llm_response = get_llm_detected_response(concern_type, analysis)
+                    st.markdown(llm_response)
+                    
+                    # Show analysis details in expander for transparency
+                    with st.expander("🔍 Analysis Details"):
+                        st.json(analysis)
+                
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": llm_response}
+                )
+            else:
+                # Normal flow - moderation and chat
+                is_safe, moderation_result = moderate_content(prompt, client)
 
-                try:
-                    stream = client.chat.completions.create(
-                        model=config.MODEL_NAME,
-                        messages=messages,
-                        temperature=config.MODEL_TEMPERATURE,
-                        max_tokens=config.MODEL_MAX_TOKENS,
-                        stream=config.MODEL_STREAM,
-                    )
+                if not is_safe:
+                    st.error(config.ERROR_MODERATION)
+                else:
+                    st.session_state.messages.append({"role": "user", "content": prompt})
+                    with st.chat_message("user"):
+                        st.write(prompt)
 
-                    for chunk in stream:
-                        if chunk.choices[0].delta.content is not None:
-                            full_response += chunk.choices[0].delta.content
-                            message_placeholder.markdown(full_response + "▌")
+                    messages = [
+                        {"role": "system", "content": load_system_prompt()}
+                    ] + st.session_state.messages
 
-                    final_response = regenerate_if_needed(
-                        full_response, messages, client
-                    )
+                    with st.chat_message("assistant"):
+                        message_placeholder = st.empty()
+                        full_response = ""
 
-                    message_placeholder.markdown(final_response)
-                    st.session_state.messages.append(
-                        {"role": "assistant", "content": final_response}
-                    )
+                        try:
+                            stream = client.chat.completions.create(
+                                model=config.MODEL_NAME,
+                                messages=messages,
+                                temperature=config.MODEL_TEMPERATURE,
+                                max_tokens=config.MODEL_MAX_TOKENS,
+                                stream=config.MODEL_STREAM,
+                            )
 
-                except Exception as e:
-                    st.error(config.ERROR_GENERIC.format(error=str(e)))
+                            for chunk in stream:
+                                if chunk.choices[0].delta.content is not None:
+                                    full_response += chunk.choices[0].delta.content
+                                    message_placeholder.markdown(full_response + "▌")
+
+                            final_response = regenerate_if_needed(
+                                full_response, messages, client
+                            )
+
+                            message_placeholder.markdown(final_response)
+                            st.session_state.messages.append(
+                                {"role": "assistant", "content": final_response}
+                            )
+
+                        except Exception as e:
+                            st.error(config.ERROR_GENERIC.format(error=str(e)))
