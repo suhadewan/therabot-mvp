@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindMitra - Login</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1e293b">
+    <meta name="description" content="Login to MindMitra - Your mental health companion">
+    
+    <!-- Styles -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            border: 1px solid rgba(71, 85, 105, 0.3);
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1rem;
+            border-radius: 12px;
+            object-fit: contain;
+            background: white;
+            padding: 8px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .title {
+            color: #e2e8f0;
+            margin-bottom: 0.5rem;
+            font-size: 1.5rem;
+        }
+
+        .subtitle {
+            color: #cbd5e1;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #e2e8f0;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #475569;
+            border-radius: 10px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        .form-group input:focus {
+            border-color: #d97706;
+        }
+
+        .form-group input::placeholder {
+            color: #94a3b8;
+        }
+
+        .login-button {
+            width: 100%;
+            background: #d97706;
+            color: white;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .login-button:hover {
+            background: #b45309;
+        }
+
+        .login-button:disabled {
+            background: #64748b;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            background: #450a0a;
+            border: 1px solid #dc2626;
+            color: #fecaca;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .success-message {
+            background: #0c4a6e;
+            border: 1px solid #0ea5e9;
+            color: #bae6fd;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .info-box {
+            background: #334155;
+            border: 1px solid #475569;
+            color: #cbd5e1;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .info-box h4 {
+            margin-bottom: 0.5rem;
+            color: #e2e8f0;
+        }
+
+        .info-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .info-box li {
+            margin-bottom: 0.25rem;
+            padding-left: 1rem;
+            position: relative;
+        }
+
+        .info-box li:before {
+            content: "•";
+            color: #d97706;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <img src="/logo.jpeg" alt="MindMitra Logo" class="logo">
+        <h1 class="title">MindMitra</h1>
+        <p class="subtitle">Your mental health companion and guide</p>
+        
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="accessCode">Access Code</label>
+                <input 
+                    type="text" 
+                    id="accessCode" 
+                    name="accessCode" 
+                    placeholder="Enter your access code"
+                    maxlength="10"
+                    required
+                >
+            </div>
+            
+            <button type="submit" class="login-button" id="loginButton">
+                Login to MindMitra
+            </button>
+        </form>
+        
+        <div class="info-box">
+            <h4>How to get an Access Code:</h4>
+            <ul>
+                <li>Contact your school counselor or teacher</li>
+                <li>Ask your mental health professional</li>
+                <li>Request from your educational institution</li>
+            </ul>
+            <p style="margin-top: 0.75rem; font-size: 0.8rem; color: #cbd5e1;">
+                Access codes are provided to ensure safe, authorized use of MindMitra.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const accessCodeInput = document.getElementById('accessCode');
+        const loginButton = document.getElementById('loginButton');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+
+        // Check if user is already logged in
+        function checkExistingSession() {
+            const loginId = localStorage.getItem('mindmitra_login_id');
+            if (loginId) {
+                // Validate existing session
+                fetch('/api/auth/validate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ login_id: loginId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.valid) {
+                        // Redirect to chat
+                        window.location.href = '/';
+                    } else {
+                        // Clear invalid session
+                        localStorage.removeItem('mindmitra_login_id');
+                    }
+                })
+                .catch(error => {
+                    console.error('Session validation error:', error);
+                    localStorage.removeItem('mindmitra_login_id');
+                });
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            successMessage.style.display = 'none';
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+        }
+
+        // Handle form submission
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const accessCode = accessCodeInput.value.trim().toUpperCase();
+            
+            if (!accessCode) {
+                showError('Please enter an access code');
+                return;
+            }
+            
+            // Disable button and show loading
+            loginButton.disabled = true;
+            loginButton.textContent = 'Logging in...';
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ access_code: accessCode })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Store login ID
+                    localStorage.setItem('mindmitra_login_id', data.login_id);
+                    localStorage.setItem('mindmitra_user_type', data.user_type);
+                    
+                    showSuccess('Login successful! Redirecting...');
+                    
+                    // Redirect to chat after short delay
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                    
+                } else {
+                    showError(data.error || 'Login failed');
+                    loginButton.disabled = false;
+                    loginButton.textContent = 'Login to MindMitra';
+                }
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                showError('Network error. Please try again.');
+                loginButton.disabled = false;
+                loginButton.textContent = 'Login to MindMitra';
+            }
+        });
+
+        // Auto-format access code (uppercase, no spaces)
+        accessCodeInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.toUpperCase().replace(/\s/g, '');
+        });
+
+        // Check session on page load
+        checkExistingSession();
+    </script>
+</body>
+</html> 

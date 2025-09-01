@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mental-health-bot-v1';
+const CACHE_NAME = 'mindmitra-v1';
 const urlsToCache = [
     '/',
     '/static/icons/icon-192x192.png',

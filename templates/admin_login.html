@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindMitra - Admin Login</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#dc2626">
+    <meta name="description" content="Admin login for MindMitra">
+    
+    <!-- Styles -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .admin-login-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .title {
+            color: #dc2626;
+            margin-bottom: 0.5rem;
+            font-size: 1.5rem;
+        }
+
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            border-color: #dc2626;
+        }
+
+        .login-button {
+            width: 100%;
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .login-button:hover {
+            background: #b91c1c;
+        }
+
+        .login-button:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .success-message {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #16a34a;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .info-box {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .info-box h4 {
+            margin-bottom: 0.5rem;
+            color: #dc2626;
+        }
+
+        .back-link {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .back-link a {
+            color: #6b7280;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .back-link a:hover {
+            color: #374151;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-login-container">
+        <div class="logo">🔒</div>
+        <h1 class="title">Admin Portal</h1>
+        <p class="subtitle">MindMitra System Administration</p>
+        
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+        
+        <form id="adminLoginForm">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input 
+                    type="text" 
+                    id="username" 
+                    name="username" 
+                    placeholder="Enter admin username"
+                    required
+                >
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    placeholder="Enter admin password"
+                    required
+                >
+            </div>
+            
+            <button type="submit" class="login-button" id="loginButton">
+                Login to Admin Portal
+            </button>
+        </form>
+        
+        <div class="info-box">
+            <h4>⚠️ Admin Access Only</h4>
+            <p>This portal is restricted to authorized administrators only.</p>
+            <p>Contact your system administrator for access credentials.</p>
+        </div>
+        
+        <div class="back-link">
+            <a href="/">← Back to MindMitra</a>
+        </div>
+    </div>
+
+    <script>
+        const adminLoginForm = document.getElementById('adminLoginForm');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const loginButton = document.getElementById('loginButton');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+
+        // Show error message
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            successMessage.style.display = 'none';
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+        }
+
+        // Handle form submission
+        adminLoginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+            
+            if (!username || !password) {
+                showError('Please enter both username and password');
+                return;
+            }
+            
+            // Disable button and show loading
+            loginButton.disabled = true;
+            loginButton.textContent = 'Logging in...';
+            
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess('Login successful! Redirecting...');
+                    
+                    // Store admin session
+                    localStorage.setItem('mindmitra_admin_username', username);
+                    localStorage.setItem('mindmitra_admin_logged_in', 'true');
+                    
+                    // Redirect to admin dashboard after short delay
+                    setTimeout(() => {
+                        window.location.href = '/admin';
+                    }, 1000);
+                    
+                } else {
+                    showError(data.error || 'Login failed');
+                    loginButton.disabled = false;
+                    loginButton.textContent = 'Login to Admin Portal';
+                }
+                
+            } catch (error) {
+                console.error('Admin login error:', error);
+                showError('Network error. Please try again.');
+                loginButton.disabled = false;
+                loginButton.textContent = 'Login to Admin Portal';
+            }
+        });
+    </script>
+</body>
+</html> 

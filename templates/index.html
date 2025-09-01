@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mental Health Support Bot</title>
+    <title>MindMitra</title>
     
     <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#667eea">
+    <meta name="theme-color" content="#d97706">
     <meta name="description" content="A supportive mental health companion for youth">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Mental Health Bot">
+    <meta name="apple-mobile-web-app-title" content="MindMitra">
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json">
@@ -31,55 +31,171 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
         .header {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(15, 23, 42, 0.95);
             backdrop-filter: blur(10px);
             padding: 1rem;
             text-align: center;
             color: white;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
+            border-bottom: 2px solid rgba(217, 119, 6, 0.3);
+            position: relative;
         }
 
         .header h1 {
             font-size: 1.5rem;
             margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        .header-logo {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            object-fit: contain;
+            background: white;
+            padding: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         .header p {
             opacity: 0.9;
             font-size: 0.9rem;
+            color: #e2e8f0;
+        }
+
+        .logout-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(71, 85, 105, 0.8);
+            border: 1px solid #475569;
+            color: #e2e8f0;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .logout-button:hover {
+            background: rgba(100, 116, 139, 0.9);
+            border-color: #64748b;
+            color: white;
         }
 
         .safety-banner {
-            background: #fef3c7;
-            border: 2px solid #f59e0b;
+            background: #1e293b;
+            border: 2px solid #475569;
             margin: 1rem;
             padding: 1rem;
             border-radius: 12px;
-            color: #92400e;
+            color: #cbd5e1;
             font-size: 0.9rem;
         }
 
         .safety-banner strong {
-            color: #78350f;
+            color: #e2e8f0;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            gap: 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 0 1rem;
         }
 
         .chat-container {
             flex: 1;
             display: flex;
             flex-direction: column;
-            max-width: 800px;
-            margin: 0 auto;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.95);
+            background: #1e293b;
             border-radius: 20px 20px 0 0;
-            box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.4);
+            min-height: 70vh;
+            border: 1px solid rgba(71, 85, 105, 0.3);
+        }
+
+        .hotlines-sidebar {
+            width: 300px;
+            background: #0f172a;
+            border-radius: 20px;
+            padding: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            height: fit-content;
+            position: sticky;
+            top: 1rem;
+            border: 1px solid rgba(71, 85, 105, 0.3);
+        }
+
+        .sidebar-header h3 {
+            color: #64748b;
+            margin-bottom: 1rem;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .hotline-section {
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #334155;
+        }
+
+        .hotline-section:last-child {
+            border-bottom: none;
+        }
+
+        .hotline-section h4 {
+            color: #cbd5e1;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .hotline-item {
+            margin-bottom: 0.5rem;
+            padding: 0.4rem;
+            background: #1e293b;
+            border-radius: 6px;
+            border-left: 3px solid #64748b;
+        }
+
+        .hotline-item strong {
+            color: #f1f5f9;
+            display: block;
+            margin-bottom: 0.2rem;
+            font-size: 0.85rem;
+        }
+
+        .hotline-item p {
+            color: #94a3b8;
+            font-weight: bold;
+            margin: 0;
+            font-size: 0.8rem;
+        }
+
+        .sidebar-footer {
+            text-align: center;
+            padding-top: 0.75rem;
+            border-top: 1px solid #334155;
+        }
+
+        .sidebar-footer p {
+            color: #94a3b8;
+            font-size: 0.8rem;
+            margin: 0;
         }
 
         .messages {
@@ -112,27 +228,30 @@
         }
 
         .message.user .message-avatar {
-            background: #667eea;
+            background: #d97706;
             color: white;
         }
 
         .message.assistant .message-avatar {
-            background: #f59e0b;
-            color: white;
+            background: #fbbf24;
+            color: #78350f;
         }
 
         .message-content {
-            background: #f8fafc;
+            background: #fef3c7;
             padding: 0.75rem 1rem;
             border-radius: 18px;
             max-width: 70%;
             word-wrap: break-word;
             line-height: 1.4;
+            color: #78350f;
+            border: 1px solid #fbbf24;
         }
 
         .message.user .message-content {
-            background: #667eea;
+            background: #d97706;
             color: white;
+            border: 1px solid #fbbf24;
         }
 
         .message.crisis .message-content {
@@ -149,9 +268,10 @@
 
         .input-container {
             padding: 1rem;
-            background: white;
+            background: #334155;
             border-radius: 0 0 20px 20px;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.4);
+            border-top: 1px solid rgba(71, 85, 105, 0.3);
         }
 
         .input-group {
@@ -163,19 +283,25 @@
         .message-input {
             flex: 1;
             padding: 0.75rem 1rem;
-            border: 2px solid #e2e8f0;
+            border: 2px solid #fbbf24;
             border-radius: 25px;
             font-size: 1rem;
             outline: none;
             transition: border-color 0.2s;
+            background: white;
+            color: #78350f;
         }
 
         .message-input:focus {
-            border-color: #667eea;
+            border-color: #d97706;
+        }
+
+        .message-input::placeholder {
+            color: #a3a3a3;
         }
 
         .send-button {
-            background: #667eea;
+            background: #d97706;
             color: white;
             border: none;
             padding: 0.75rem 1rem;
@@ -190,18 +316,18 @@
         }
 
         .send-button:hover {
-            background: #5a67d8;
+            background: #b45309;
         }
 
         .send-button:disabled {
-            background: #cbd5e0;
+            background: #64748b;
             cursor: not-allowed;
         }
 
         .typing-indicator {
             display: none;
             padding: 0.75rem 1rem;
-            color: #64748b;
+            color: #cbd5e1;
             font-style: italic;
         }
 
@@ -230,9 +356,15 @@
         }
 
         @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+                padding: 0;
+            }
+            
             .chat-container {
                 border-radius: 0;
                 margin: 0;
+                min-height: 60vh;
             }
             
             .input-container {
@@ -242,6 +374,32 @@
             .message-content {
                 max-width: 85%;
             }
+
+            .hotlines-sidebar {
+                width: 100%;
+                border-radius: 0;
+                margin: 0;
+                position: static;
+                order: -1;
+            }
+
+            .hotlines-sidebar .hotline-section {
+                display: inline-block;
+                width: calc(50% - 0.5rem);
+                margin-right: 0.5rem;
+                vertical-align: top;
+            }
+
+            .hotlines-sidebar .hotline-section:nth-child(even) {
+                margin-right: 0;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hotlines-sidebar .hotline-section {
+                width: 100%;
+                margin-right: 0;
+            }
         }
 
         /* Install prompt */
@@ -250,18 +408,19 @@
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: #667eea;
+            background: #1e293b;
             color: white;
             padding: 1rem 1.5rem;
             border-radius: 25px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
             display: none;
             z-index: 1000;
+            border: 1px solid #475569;
         }
 
         .install-prompt button {
-            background: white;
-            color: #667eea;
+            background: #475569;
+            color: white;
             border: none;
             padding: 0.5rem 1rem;
             border-radius: 20px;
@@ -269,39 +428,91 @@
             cursor: pointer;
             font-weight: bold;
         }
+
+        .install-prompt button:hover {
+            background: #64748b;
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🧠 Mental Health Support Bot</h1>
-        <p>A supportive companion for youth mental wellness</p>
-    </div>
+            <div class="header">
+            <h1>
+                <img src="/logo.jpeg" alt="MindMitra Logo" class="header-logo">
+                MindMitra
+            </h1>
+            <p>Your mental health companion and guide</p>
+            <button class="logout-button" onclick="logout()">Logout</button>
+        </div>
 
     <div class="safety-banner">
         ⚠️ <strong>Important Notice</strong>: This is a non-clinical support tool for general mental wellness. If you're experiencing a crisis, please contact emergency services (911) or a crisis hotline immediately.
     </div>
 
-    <div class="chat-container">
-        <div class="messages" id="messages">
-            <div class="message assistant">
-                <div class="message-avatar">🤖</div>
-                <div class="message-content">
-                    Hi there! I'm here to listen and support you. How are you feeling today?
+    <div class="main-content">
+        <div class="chat-container">
+            <div class="messages" id="messages">
+                <div class="message assistant">
+                    <div class="message-avatar">🤖</div>
+                    <div class="message-content">
+                        Hi there! I'm here to listen and support you. How are you feeling today?
+                    </div>
+                </div>
+            </div>
+
+            <div class="typing-indicator" id="typing">
+                <i class="fas fa-circle"></i> Bot is typing...
+            </div>
+
+            <div class="input-container">
+                <div class="input-group">
+                    <input type="text" class="message-input" id="messageInput" placeholder="How are you feeling today?" maxlength="500">
+                    <button class="send-button" id="sendButton" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
                 </div>
             </div>
         </div>
 
-        <div class="typing-indicator" id="typing">
-            <i class="fas fa-circle"></i> Bot is typing...
-        </div>
-
-        <div class="input-container">
-            <div class="input-group">
-                <input type="text" class="message-input" id="messageInput" placeholder="How are you feeling today?" maxlength="500">
-                <button class="send-button" id="sendButton" onclick="sendMessage()">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
+        <div class="hotlines-sidebar">
+            <div class="sidebar-header">
+                <h3>📞 Emergency Helplines</h3>
             </div>
+            
+            <div class="hotline-section">
+                <h4>🚨 Crisis Support</h4>
+                <div class="hotline-item">
+                    <strong>AASRA</strong>
+                    <p>022 2754 6669</p>
+                </div>
+                <div class="hotline-item">
+                    <strong>Kiran Helpline</strong>
+                    <p>1800-599-0019</p>
+                </div>
+                <div class="hotline-item">
+                    <strong>Tele Manas</strong>
+                    <p>1800-891-4416</p>
+                </div>
+            </div>
+
+            <div class="hotline-section">
+                <h4>🆘 Emergency Services</h4>
+                <div class="hotline-item">
+                    <strong>Police</strong>
+                    <p>100</p>
+                </div>
+                <div class="hotline-item">
+                    <strong>Ambulance</strong>
+                    <p>102</p>
+                </div>
+                <div class="hotline-item">
+                    <strong>Emergency</strong>
+                    <p>112</p>
+                </div>
+                <div class="sidebar-footer">
+                    <p><strong>💛 You're not alone. Help is available 24/7.</strong></p>
+                </div>
+            </div>
+            
         </div>
     </div>
 
@@ -312,7 +523,65 @@
 
     <script>
         let deferredPrompt;
-        let userId = 'user_' + Math.random().toString(36).substr(2, 9);
+        let userId = null;
+        
+        // Check authentication on page load
+        function checkAuth() {
+            const loginId = localStorage.getItem('mindmitra_login_id');
+            if (!loginId) {
+                // Redirect to login if not authenticated
+                window.location.href = '/login';
+                return;
+            }
+            
+            // Validate session with server
+            fetch('/api/auth/validate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ login_id: loginId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.valid) {
+                    userId = loginId;
+                    // Load user info
+                    if (data.user) {
+                        console.log('Logged in as:', data.user.login_id);
+                    }
+                } else {
+                    // Clear invalid session and redirect to login
+                    localStorage.removeItem('mindmitra_login_id');
+                    localStorage.removeItem('mindmitra_user_type');
+                    window.location.href = '/login';
+                }
+            })
+            .catch(error => {
+                console.error('Auth validation error:', error);
+                localStorage.removeItem('mindmitra_login_id');
+                localStorage.removeItem('mindmitra_user_type');
+                window.location.href = '/login';
+            });
+        }
+        
+        // Logout function
+        function logout() {
+            const loginId = localStorage.getItem('mindmitra_login_id');
+            if (loginId) {
+                fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ login_id: loginId })
+                }).catch(error => console.error('Logout error:', error));
+            }
+            
+            localStorage.removeItem('mindmitra_login_id');
+            localStorage.removeItem('mindmitra_user_type');
+            window.location.href = '/login';
+        }
 
         // PWA Install Prompt
         window.addEventListener('beforeinstallprompt', (e) => {
@@ -437,6 +706,9 @@
 
         // Focus input on load
         messageInput.focus();
+        
+        // Check authentication on page load
+        checkAuth();
 
         // Service Worker Registration
         if ('serviceWorker' in navigator) {

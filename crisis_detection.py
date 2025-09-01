@@ -110,7 +110,9 @@ def detect_abuse_keywords(input_lower: str) -> bool:
     # Check for pattern matches
     abuse_patterns = [
         r'\b(hit|hitting|slapped|punched|kicked|beat|beating)\b',
-        r'\b(hurt|hurting)\b',  # Added hurt patterns
+        # More specific hurt patterns - only when someone else is doing the hurting
+        r'\b(he|she|they)\s+(hurt|hurting)\s+(me|him|her)\b',
+        r'\b(someone|anyone)\s+(hurt|hurting)\s+(me|him|her)\b',
         r'\b(abuse|abused|abusive)\b',
         r'\b(rape|raped|molest|molested)\b',
         r'\b(harass|harassed|harassment)\b',
@@ -123,7 +125,7 @@ def detect_abuse_keywords(input_lower: str) -> bool:
         r'\b(control|torture|gali|bura)\b',  # Hindi emotional abuse
         r'\b(safe|khatra|darr|peecha)\b',    # Hindi safety
         # Combined patterns for better detection
-        r'\b(he|she|they)\s+(hurt|hit|beat|slapped|punched|kicked)\s+(me|him|her)\b',
+        r'\b(he|she|they)\s+(hit|beat|slapped|punched|kicked)\s+(me|him|her)\b',
         r'\b(physically|mentally|emotionally)\s+(hurt|abused|harmed)\b',
     ]
     
@@ -150,23 +152,13 @@ def get_abuse_response() -> str:
     """
     Return the abuse intervention response.
     """
-    return """**AASRA – We're Here To Help.** 💛
+    return """AASRA – We're Here To Help. 💛
 
-If you're feeling unsafe, distressed, or in pain, please reach out.
+If you're feeling unsafe or in pain, please reach out.
 
-**Call AASRA:** 022 2754 6669
+Call AASRA: 022 2754 6669
 
-**You're not alone. Help is available.**
+Emergency Numbers:
+• Police: 100 • Women Helpline: 1091 • Child Helpline: 1098
 
-**Additional Resources:**
-• **National Commission for Women Helpline:** 7827170170
-• **Women Helpline (All India):** 1091
-• **Child Helpline:** 1098
-• **Police:** 100
-
-**For immediate safety:**
-• If you're in immediate danger, call 100 (Police) or 112 (Emergency)
-• Reach out to a trusted friend, family member, or teacher
-• Consider contacting a counselor or mental health professional
-
-Remember: You deserve to feel safe and supported. There are people who want to help you.""" 
+You're not alone. Help is available.""" 

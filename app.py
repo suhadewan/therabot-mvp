@@ -128,45 +128,45 @@ if prompt := st.chat_input(config.CHAT_PLACEHOLDER):
                 )
             else:
                 # Normal flow - moderation and chat
-                is_safe, moderation_result = moderate_content(prompt, client)
+        is_safe, moderation_result = moderate_content(prompt, client)
 
-                if not is_safe:
-                    st.error(config.ERROR_MODERATION)
-                else:
-                    st.session_state.messages.append({"role": "user", "content": prompt})
-                    with st.chat_message("user"):
-                        st.write(prompt)
+        if not is_safe:
+            st.error(config.ERROR_MODERATION)
+        else:
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.write(prompt)
 
-                    messages = [
-                        {"role": "system", "content": load_system_prompt()}
-                    ] + st.session_state.messages
+            messages = [
+                {"role": "system", "content": load_system_prompt()}
+            ] + st.session_state.messages
 
-                    with st.chat_message("assistant"):
-                        message_placeholder = st.empty()
-                        full_response = ""
+            with st.chat_message("assistant"):
+                message_placeholder = st.empty()
+                full_response = ""
 
-                        try:
-                            stream = client.chat.completions.create(
-                                model=config.MODEL_NAME,
-                                messages=messages,
-                                temperature=config.MODEL_TEMPERATURE,
-                                max_tokens=config.MODEL_MAX_TOKENS,
-                                stream=config.MODEL_STREAM,
-                            )
+                try:
+                    stream = client.chat.completions.create(
+                        model=config.MODEL_NAME,
+                        messages=messages,
+                        temperature=config.MODEL_TEMPERATURE,
+                        max_tokens=config.MODEL_MAX_TOKENS,
+                        stream=config.MODEL_STREAM,
+                    )
 
-                            for chunk in stream:
-                                if chunk.choices[0].delta.content is not None:
-                                    full_response += chunk.choices[0].delta.content
-                                    message_placeholder.markdown(full_response + "▌")
+                    for chunk in stream:
+                        if chunk.choices[0].delta.content is not None:
+                            full_response += chunk.choices[0].delta.content
+                            message_placeholder.markdown(full_response + "▌")
 
-                            final_response = regenerate_if_needed(
-                                full_response, messages, client
-                            )
+                    final_response = regenerate_if_needed(
+                        full_response, messages, client
+                    )
 
-                            message_placeholder.markdown(final_response)
-                            st.session_state.messages.append(
-                                {"role": "assistant", "content": final_response}
-                            )
+                    message_placeholder.markdown(final_response)
+                    st.session_state.messages.append(
+                        {"role": "assistant", "content": final_response}
+                    )
 
-                        except Exception as e:
-                            st.error(config.ERROR_GENERIC.format(error=str(e)))
+                except Exception as e:
+                    st.error(config.ERROR_GENERIC.format(error=str(e)))
