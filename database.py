@@ -80,6 +80,26 @@ class DatabaseInterface(ABC):
         """Update admin's last login timestamp"""
         pass
 
+    @abstractmethod
+    def create_access_code(self, code: str, user_type: str, school_id: str, max_uses: int, created_by: str) -> bool:
+        """Create a new access code"""
+        pass
+
+    @abstractmethod
+    def get_all_access_codes(self) -> List[Dict[str, Any]]:
+        """Get all access codes with their details"""
+        pass
+
+    @abstractmethod
+    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None) -> bool:
+        """Update access code properties"""
+        pass
+
+    @abstractmethod
+    def delete_access_code(self, code: str) -> bool:
+        """Delete an access code (soft delete by setting inactive)"""
+        pass
+
 class SQLiteDatabase(DatabaseInterface):
     """SQLite implementation of the database interface"""
     
@@ -313,7 +333,7 @@ class SQLiteDatabase(DatabaseInterface):
             cursor = conn.cursor()
             
             cursor.execute('''
-                SELECT code, user_type, school_id, is_active, max_uses, current_uses, expires_at
+                SELECT code, user_type, school_id, is_active, max_uses, current_uses
                 FROM access_codes 
                 WHERE code = ? AND is_active = TRUE
             ''', (code,))
@@ -322,17 +342,30 @@ class SQLiteDatabase(DatabaseInterface):
             conn.close()
             
             if row:
+                code_data = row[0]
+                user_type = row[1]
+                school_id = row[2]
+                is_active = row[3]
+                max_uses = row[4]
+                current_uses = row[5]
+                
+                # Check if code has reached max uses
+                if current_uses >= max_uses:
+                    return {
+                        'valid': False,
+                        'error': 'Access code has reached maximum uses'
+                    }
+                
                 return {
-                    'code': row[0],
-                    'user_type': row[1],
-                    'school_id': row[2],
-                    'is_active': row[3],
-                    'max_uses': row[4],
-                    'current_uses': row[5],
-                    'expires_at': row[6],
+                    'code': code_data,
+                    'user_type': user_type,
+                    'school_id': school_id,
+                    'is_active': is_active,
+                    'max_uses': max_uses,
+                    'current_uses': current_uses,
                     'valid': True
                 }
-            return {'valid': False}
+            return {'valid': False, 'error': 'Invalid access code'}
             
         except Exception as e:
             logger.error(f"Error validating access code: {e}")
@@ -525,6 +558,119 @@ class SQLiteDatabase(DatabaseInterface):
         except Exception as e:
             logger.error(f"Error updating admin last login: {e}")
             return False
+
+    def create_access_code(self, code: str, user_type: str, school_id: str, max_uses: int, created_by: str) -> bool:
+        """Create a new access code"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT INTO access_codes 
+                (code, user_type, school_id, is_active, max_uses, current_uses, created_at, created_by)
+                VALUES (?, ?, ?, TRUE, ?, 0, CURRENT_TIMESTAMP, ?)
+            ''', (code, user_type, school_id, max_uses, created_by))
+            
+            conn.commit()
+            conn.close()
+            logger.info(f"Access code created: {code}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error creating access code: {e}")
+            return False
+
+    def get_all_access_codes(self) -> List[Dict[str, Any]]:
+        """Get all access codes with their details"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT code, user_type, school_id, is_active, max_uses, current_uses, created_at, created_by
+                FROM access_codes 
+                ORDER BY created_at DESC
+            ''')
+            
+            rows = cursor.fetchall()
+            conn.close()
+            
+            access_codes = []
+            for row in rows:
+                access_codes.append({
+                    'code': row[0],
+                    'user_type': row[1],
+                    'school_id': row[2],
+                    'is_active': row[3],
+                    'max_uses': row[4],
+                    'current_uses': row[5],
+                    'created_at': row[6],
+                    'created_by': row[7]
+                })
+            
+            return access_codes
+            
+        except Exception as e:
+            logger.error(f"Error getting access codes: {e}")
+            return []
+
+    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None) -> bool:
+        """Update access code properties"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            update_fields = []
+            params = []
+            
+            if is_active is not None:
+                update_fields.append("is_active = ?")
+                params.append(is_active)
+            
+            if max_uses is not None:
+                update_fields.append("max_uses = ?")
+                params.append(max_uses)
+            
+            if not update_fields:
+                return False
+            
+            params.append(code)
+            
+            cursor.execute(f'''
+                UPDATE access_codes 
+                SET {', '.join(update_fields)}
+                WHERE code = ?
+            ''', params)
+            
+            conn.commit()
+            conn.close()
+            logger.info(f"Access code updated: {code}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating access code: {e}")
+            return False
+
+    def delete_access_code(self, code: str) -> bool:
+        """Delete an access code (soft delete by setting inactive)"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                UPDATE access_codes 
+                SET is_active = FALSE
+                WHERE code = ?
+            ''', (code,))
+            
+            conn.commit()
+            conn.close()
+            logger.info(f"Access code deleted: {code}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error deleting access code: {e}")
+            return False
     
     def close(self):
         """Close SQLite database connection"""
@@ -600,6 +746,26 @@ class PostgreSQLDatabase(DatabaseInterface):
     
     def update_admin_last_login(self, username: str) -> bool:
         """Update admin's last login timestamp"""
+        # PostgreSQL implementation would go here
+        pass
+
+    def create_access_code(self, code: str, user_type: str, school_id: str, max_uses: int, created_by: str) -> bool:
+        """Create a new access code"""
+        # PostgreSQL implementation would go here
+        pass
+
+    def get_all_access_codes(self) -> List[Dict[str, Any]]:
+        """Get all access codes with their details"""
+        # PostgreSQL implementation would go here
+        pass
+
+    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None) -> bool:
+        """Update access code properties"""
+        # PostgreSQL implementation would go here
+        pass
+
+    def delete_access_code(self, code: str) -> bool:
+        """Delete an access code (soft delete by setting inactive)"""
         # PostgreSQL implementation would go here
         pass
     
@@ -684,6 +850,22 @@ class DatabaseManager:
     def update_admin_last_login(self, username: str) -> bool:
         """Update admin's last login timestamp"""
         return self.database.update_admin_last_login(username)
+
+    def create_access_code(self, code: str, user_type: str, school_id: str, max_uses: int, created_by: str) -> bool:
+        """Create a new access code"""
+        return self.database.create_access_code(code, user_type, school_id, max_uses, created_by)
+
+    def get_all_access_codes(self) -> List[Dict[str, Any]]:
+        """Get all access codes with their details"""
+        return self.database.get_all_access_codes()
+
+    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None) -> bool:
+        """Update access code properties"""
+        return self.database.update_access_code(code, is_active, max_uses)
+
+    def delete_access_code(self, code: str) -> bool:
+        """Delete an access code (soft delete by setting inactive)"""
+        return self.database.delete_access_code(code)
     
     def close(self):
         """Close database connection"""

@@ -230,6 +230,178 @@
             border-radius: 8px;
             margin: 1rem 0;
         }
+
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            background: #f9fafb;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 1rem;
+            color: #6b7280;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .tab:hover:not(.active) {
+            background: #f3f4f6;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .access-code-form {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .btn-success {
+            background: #16a34a;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #15803d;
+        }
+
+        .access-codes-list {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .access-code-item {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .access-code-item:last-child {
+            border-bottom: none;
+        }
+
+        .access-code-info {
+            flex: 1;
+        }
+
+        .access-code-code {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #374151;
+            margin-bottom: 0.25rem;
+        }
+
+        .access-code-details {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .access-code-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-badge.active {
+            background: #f0fdf4;
+            color: #16a34a;
+        }
+
+        .status-badge.inactive {
+            background: #fef2f2;
+            color: #dc2626;
+        }
     </style>
 </head>
 <body>
@@ -247,17 +419,69 @@
             <div class="loading">Loading statistics...</div>
         </div>
 
-        <div class="flagged-chats">
-            <div class="section-header">
-                <h2>🚨 Flagged Chats</h2>
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('flagged-chats')">🚨 Flagged Chats</button>
+            <button class="tab" onclick="showTab('access-codes')">🔑 Access Codes</button>
+        </div>
+
+        <!-- Flagged Chats Tab -->
+        <div id="flagged-chats" class="tab-content active">
+            <div class="flagged-chats">
+                <div class="section-header">
+                    <h2>🚨 Flagged Chats</h2>
+                </div>
+                <div class="chat-list" id="chatList">
+                    <div class="loading">Loading flagged chats...</div>
+                </div>
+                <div class="pagination" id="pagination" style="display: none;">
+                    <button onclick="previousPage()" id="prevBtn">Previous</button>
+                    <span class="current-page" id="currentPage">Page 1</span>
+                    <button onclick="nextPage()" id="nextBtn">Next</button>
+                </div>
             </div>
-            <div class="chat-list" id="chatList">
-                <div class="loading">Loading flagged chats...</div>
+        </div>
+
+        <!-- Access Codes Tab -->
+        <div id="access-codes" class="tab-content">
+            <div class="access-code-form">
+                <h3>Create New Access Code</h3>
+                <form id="accessCodeForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="code">Access Code</label>
+                            <input type="text" id="code" name="code" placeholder="e.g., STU001" maxlength="10" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="user_type">User Type</label>
+                            <select id="user_type" name="user_type" required>
+                                <option value="">Select user type</option>
+                                <option value="student">Student</option>
+                                <option value="teacher">Teacher</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="school_id">School ID</label>
+                            <input type="text" id="school_id" name="school_id" placeholder="e.g., delhi_high_school">
+                        </div>
+                        <div class="form-group">
+                            <label for="max_uses">Maximum Uses</label>
+                            <input type="number" id="max_uses" name="max_uses" value="1" min="1" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Access Code</button>
+                </form>
             </div>
-            <div class="pagination" id="pagination" style="display: none;">
-                <button onclick="previousPage()" id="prevBtn">Previous</button>
-                <span class="current-page" id="currentPage">Page 1</span>
-                <button onclick="nextPage()" id="nextBtn">Next</button>
+
+            <div class="access-codes-list">
+                <div class="section-header">
+                    <h2>🔑 Manage Access Codes</h2>
+                </div>
+                <div id="accessCodesList">
+                    <div class="loading">Loading access codes...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -383,6 +607,7 @@
             checkAdminAuth();
             loadStats();
             loadFlaggedChats();
+            loadAccessCodes();
         });
 
         // Refresh data every 30 seconds
@@ -390,6 +615,147 @@
             loadStats();
             loadFlaggedChats(currentPage);
         }, 30000);
+
+        // Tab switching functionality
+        function showTab(tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        // Access Code Management
+        document.getElementById('accessCodeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = {
+                code: formData.get('code').toUpperCase(),
+                user_type: formData.get('user_type'),
+                school_id: formData.get('school_id') || '',
+                max_uses: parseInt(formData.get('max_uses')),
+                created_by: 'admin'
+            };
+            
+            try {
+                const response = await fetch('/admin/access-codes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message);
+                    e.target.reset();
+                    loadAccessCodes();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error creating access code: ' + error.message);
+            }
+        });
+
+        async function loadAccessCodes() {
+            try {
+                const response = await fetch('/admin/access-codes');
+                const data = await response.json();
+                
+                const accessCodesList = document.getElementById('accessCodesList');
+                
+                if (data.access_codes && data.access_codes.length > 0) {
+                    accessCodesList.innerHTML = data.access_codes.map(code => `
+                        <div class="access-code-item">
+                            <div class="access-code-info">
+                                <div class="access-code-code">${code.code}</div>
+                                <div class="access-code-details">
+                                    Type: ${code.user_type} | School: ${code.school_id || 'N/A'} | 
+                                    Uses: ${code.current_uses}/${code.max_uses} | 
+                                    Created: ${new Date(code.created_at).toLocaleDateString()}
+                                </div>
+                            </div>
+                            <div class="access-code-actions">
+                                <span class="status-badge ${code.is_active ? 'active' : 'inactive'}">
+                                    ${code.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                                <button onclick="toggleAccessCode('${code.code}', ${!code.is_active})" 
+                                        class="btn ${code.is_active ? 'btn-danger' : 'btn-success'}">
+                                    ${code.is_active ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <button onclick="deleteAccessCode('${code.code}')" class="btn btn-danger">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    accessCodesList.innerHTML = '<div class="loading">No access codes found</div>';
+                }
+            } catch (error) {
+                document.getElementById('accessCodesList').innerHTML = `
+                    <div class="error">Error loading access codes: ${error.message}</div>
+                `;
+            }
+        }
+
+        async function toggleAccessCode(code, isActive) {
+            try {
+                const response = await fetch(`/admin/access-codes/${code}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ is_active: isActive })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message);
+                    loadAccessCodes();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error updating access code: ' + error.message);
+            }
+        }
+
+        async function deleteAccessCode(code) {
+            if (!confirm(`Are you sure you want to delete access code ${code}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/access-codes/${code}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message);
+                    loadAccessCodes();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error deleting access code: ' + error.message);
+            }
+        }
     </script>
 </body>
 </html> 

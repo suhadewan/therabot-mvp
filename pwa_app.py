@@ -468,6 +468,89 @@ def admin_logout():
         print(f"Admin logout error: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
+@app.route('/admin/access-codes', methods=['GET'])
+def get_access_codes():
+    """Get all access codes for admin management"""
+    try:
+        db = get_database()
+        access_codes = db.get_all_access_codes()
+        return jsonify({"access_codes": access_codes})
+        
+    except Exception as e:
+        print(f"Error getting access codes: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/admin/access-codes', methods=['POST'])
+def create_access_code():
+    """Create a new access code"""
+    try:
+        data = request.get_json()
+        code = data.get('code', '').strip().upper()
+        user_type = data.get('user_type', '').strip()
+        school_id = data.get('school_id', '').strip()
+        max_uses = int(data.get('max_uses', 1))
+        created_by = data.get('created_by', 'admin')
+        
+        if not code or not user_type:
+            return jsonify({"error": "Code and user_type are required"}), 400
+        
+        if max_uses < 1:
+            return jsonify({"error": "Max uses must be at least 1"}), 400
+        
+        db = get_database()
+        success = db.create_access_code(code, user_type, school_id, max_uses, created_by)
+        
+        if success:
+            return jsonify({"success": True, "message": f"Access code {code} created successfully"})
+        else:
+            return jsonify({"error": "Failed to create access code"}), 500
+            
+    except Exception as e:
+        print(f"Error creating access code: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/admin/access-codes/<code>', methods=['PUT'])
+def update_access_code(code):
+    """Update an access code"""
+    try:
+        data = request.get_json()
+        is_active = data.get('is_active')
+        max_uses = data.get('max_uses')
+        
+        if is_active is None and max_uses is None:
+            return jsonify({"error": "At least one field to update is required"}), 400
+        
+        if max_uses is not None and max_uses < 1:
+            return jsonify({"error": "Max uses must be at least 1"}), 400
+        
+        db = get_database()
+        success = db.update_access_code(code, is_active, max_uses)
+        
+        if success:
+            return jsonify({"success": True, "message": f"Access code {code} updated successfully"})
+        else:
+            return jsonify({"error": "Failed to update access code"}), 500
+            
+    except Exception as e:
+        print(f"Error updating access code: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/admin/access-codes/<code>', methods=['DELETE'])
+def delete_access_code(code):
+    """Delete an access code (soft delete)"""
+    try:
+        db = get_database()
+        success = db.delete_access_code(code)
+        
+        if success:
+            return jsonify({"success": True, "message": f"Access code {code} deleted successfully"})
+        else:
+            return jsonify({"error": "Failed to delete access code"}), 500
+            
+    except Exception as e:
+        print(f"Error deleting access code: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
 if __name__ == '__main__':
     # Check required environment variables
     if not os.getenv('OPENAI_API_KEY'):
