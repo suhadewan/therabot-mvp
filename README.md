@@ -1,4 +1,4 @@
-# Mental Health Support Bot MVP
+# MindMitra - Mental Health Support MVP
 
 A supportive mental health chatbot for youth built with Streamlit and OpenAI's GPT-4o-mini.
 

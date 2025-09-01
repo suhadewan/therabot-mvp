@@ -119,66 +119,66 @@ def get_llm_detected_response(concern_type: str, analysis: Dict[str, Any]) -> st
     """
     
     if concern_type == "suicide":
-        return """🚨 **Crisis Support Available**
+        return """🚨 Crisis Support Available
 
 I'm concerned about what you're sharing. You're not alone, and help is available right now.
 
-**Immediate Support:**
-👉 **Outlive Chat**: https://chat.outlive.in/landing-page
-☎️ **AASRA Helpline**: 022 2754 6669
-📞 **Crisis Helpline**: 1800-599-0019
+Immediate Support:
+👉 Outlive Chat: https://chat.outlive.in/landing-page
+☎️ AASRA Helpline: 022 2754 6669
+📞 Crisis Helpline: 1800-599-0019
 
-**You matter, and there are people who want to help you through this difficult time.**
+You matter, and there are people who want to help you through this difficult time.
 
 If you're in immediate danger, please call emergency services (112) or go to the nearest hospital."""
     
     elif concern_type == "abuse":
-        return """🛡️ **Safety Support Available**
+        return """🛡️ Safety Support Available
 
 I'm concerned about your safety. You deserve to feel safe and supported.
 
-**Immediate Help:**
-☎️ **AASRA**: 022 2754 6669
-📞 **Women Helpline**: 1091
-🚔 **Police**: 100
+Immediate Help:
+☎️ AASRA: 022 2754 6669
+📞 Women Helpline: 1091
+🚔 Police: 100
 
-**For immediate safety:**
+For immediate safety:
 • If you're in immediate danger, call 100 (Police) or 112 (Emergency)
 • Reach out to a trusted friend, family member, or teacher
 • Consider contacting a counselor or mental health professional
 
-**You deserve to feel safe. There are people who want to help you.**"""
+You deserve to feel safe. There are people who want to help you."""
     
     elif concern_type == "crisis":
-        return """⚠️ **Safety Concern Detected**
+        return """⚠️ Safety Concern Detected
 
 I'm concerned about your safety. Please know that help is available.
 
-**Emergency Resources:**
-🚔 **Police**: 100
-🚑 **Emergency**: 112
-☎️ **AASRA**: 022 2754 6669
+Emergency Resources:
+🚔 Police: 100
+🚑 Emergency: 112
+☎️ AASRA: 022 2754 6669
 
-**If you're feeling unsafe:**
+If you're feeling unsafe:
 • Call emergency services immediately if in danger
 • Reach out to someone you trust
 • Consider speaking with a mental health professional
 
-**Your safety matters. Don't hesitate to ask for help.**"""
+Your safety matters. Don't hesitate to ask for help."""
     
     else:  # distress or other concerns
-        return """💙 **Support Available**
+        return """💙 Support Available
 
 I can see you're going through a difficult time. You don't have to face this alone.
 
-**Professional Support:**
-☎️ **AASRA**: 022 2754 6669
-📞 **Kiran Helpline**: 1800-599-0019
-🌐 **Tele Manas**: 1800-891-4416
+Professional Support:
+☎️ AASRA: 022 2754 6669
+📞 Kiran Helpline: 1800-599-0019
+🌐 Tele Manas: 1800-891-4416
 
-**Consider reaching out to:**
+Consider reaching out to:
 • A trusted friend or family member
 • A school counselor or teacher
 • A mental health professional
 
-**It's okay to ask for help. You deserve support.**""" 
+It's okay to ask for help. You deserve support.""" 

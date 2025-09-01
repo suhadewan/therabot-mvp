@@ -154,7 +154,7 @@ def webhook():
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
-    return jsonify({"status": "healthy", "service": "whatsapp-mental-health-bot"})
+    return jsonify({"status": "healthy", "service": "mindmitra-whatsapp"})
 
 @app.route('/stats', methods=['GET'])
 def get_stats():
@@ -174,7 +174,7 @@ if __name__ == '__main__':
         print("Please set these in your .env file")
         exit(1)
     
-    print("Starting WhatsApp Mental Health Bot...")
+    print("Starting MindMitra WhatsApp Bot...")
     print(f"Twilio Phone Number: {TWILIO_PHONE_NUMBER}")
     
     # Run Flask app

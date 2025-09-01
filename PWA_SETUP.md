@@ -113,7 +113,7 @@ Edit `pwa_app.py`:
 ### Option 1: Heroku
 ```bash
 # Create app
-heroku create your-mental-health-pwa
+heroku create your-mindmitra-pwa
 
 # Set environment variables
 heroku config:set OPENAI_API_KEY=your_key

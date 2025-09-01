@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - MindMitra</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #374151;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: #667eea;
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .admin-controls {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .admin-info {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.9rem;
+        }
+        
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .flagged-chats {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: #f3f4f6;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .section-header h2 {
+            color: #374151;
+            font-size: 1.5rem;
+        }
+
+        .chat-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .chat-item {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f3f4f6;
+            transition: background 0.2s;
+        }
+
+        .chat-item:hover {
+            background: #f9fafb;
+        }
+
+        .chat-item:last-child {
+            border-bottom: none;
+        }
+
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .flag-type {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .flag-type.crisis {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .flag-type.abuse {
+            background: #eff6ff;
+            color: #2563eb;
+        }
+
+        .flag-type.moderation {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .flag-type.safety_concern {
+            background: #f0fdf4;
+            color: #16a34a;
+        }
+
+        .chat-timestamp {
+            color: #6b7280;
+            font-size: 0.8rem;
+        }
+
+        .chat-message {
+            background: #f8fafc;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid #667eea;
+        }
+
+        .chat-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: #f9fafb;
+        }
+
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pagination button:hover {
+            background: #f3f4f6;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination .current-page {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6b7280;
+        }
+
+        .error {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧠 MindMitra Admin Dashboard</h1>
+        <p>Monitor flagged chats and system statistics</p>
+        <div class="admin-controls">
+            <span id="adminInfo" class="admin-info">Loading...</span>
+            <button onclick="adminLogout()" class="logout-btn">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="stats-grid" id="statsGrid">
+            <div class="loading">Loading statistics...</div>
+        </div>
+
+        <div class="flagged-chats">
+            <div class="section-header">
+                <h2>🚨 Flagged Chats</h2>
+            </div>
+            <div class="chat-list" id="chatList">
+                <div class="loading">Loading flagged chats...</div>
+            </div>
+            <div class="pagination" id="pagination" style="display: none;">
+                <button onclick="previousPage()" id="prevBtn">Previous</button>
+                <span class="current-page" id="currentPage">Page 1</span>
+                <button onclick="nextPage()" id="nextBtn">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const limit = 20;
+        
+        // Check admin authentication
+        function checkAdminAuth() {
+            const isAdminLoggedIn = localStorage.getItem('mindmitra_admin_logged_in');
+            const adminUsername = localStorage.getItem('mindmitra_admin_username');
+            
+            if (!isAdminLoggedIn || !adminUsername) {
+                // Redirect to admin login
+                window.location.href = '/admin-login';
+                return;
+            }
+            
+            // Show admin info
+            document.getElementById('adminInfo').textContent = `Logged in as: ${adminUsername}`;
+        }
+        
+        // Logout function
+        function adminLogout() {
+            localStorage.removeItem('mindmitra_admin_logged_in');
+            localStorage.removeItem('mindmitra_admin_username');
+            window.location.href = '/admin-login';
+        }
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                const response = await fetch('/admin/stats');
+                const stats = await response.json();
+                
+                const statsGrid = document.getElementById('statsGrid');
+                statsGrid.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.total_flagged || 0}</div>
+                        <div class="stat-label">Total Flagged Chats</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.recent_24h || 0}</div>
+                        <div class="stat-label">Last 24 Hours</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.recent_7d || 0}</div>
+                        <div class="stat-label">Last 7 Days</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.database_type || 'Unknown'}</div>
+                        <div class="stat-label">Database Type</div>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('statsGrid').innerHTML = `
+                    <div class="error">Error loading statistics: ${error.message}</div>
+                `;
+            }
+        }
+
+        // Load flagged chats
+        async function loadFlaggedChats(page = 1) {
+            try {
+                const response = await fetch(`/admin/flagged-chats?page=${page}&limit=${limit}`);
+                const data = await response.json();
+                
+                const chatList = document.getElementById('chatList');
+                const pagination = document.getElementById('pagination');
+                
+                if (data.flagged_chats && data.flagged_chats.length > 0) {
+                    chatList.innerHTML = data.flagged_chats.map(chat => `
+                        <div class="chat-item">
+                            <div class="chat-header">
+                                <span class="flag-type ${chat.flag_type}">${chat.flag_type}</span>
+                                <span class="chat-timestamp">${new Date(chat.timestamp).toLocaleString()}</span>
+                            </div>
+                            <div class="chat-message">
+                                <strong>User ID:</strong> ${chat.user_id}<br>
+                                <strong>Message:</strong> ${chat.message}
+                            </div>
+                            <div class="chat-details">
+                                <div><strong>Confidence:</strong> ${(chat.confidence * 100).toFixed(1)}%</div>
+                                <div><strong>IP Address:</strong> ${chat.ip_address || 'Unknown'}</div>
+                                <div><strong>User Agent:</strong> ${chat.user_agent ? chat.user_agent.substring(0, 50) + '...' : 'Unknown'}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                    
+                    // Show pagination if there are more pages
+                    if (data.flagged_chats.length === limit) {
+                        pagination.style.display = 'flex';
+                        currentPage = page;
+                        document.getElementById('currentPage').textContent = `Page ${page}`;
+                        document.getElementById('prevBtn').disabled = page === 1;
+                    } else {
+                        pagination.style.display = 'none';
+                    }
+                } else {
+                    chatList.innerHTML = '<div class="loading">No flagged chats found</div>';
+                    pagination.style.display = 'none';
+                }
+            } catch (error) {
+                document.getElementById('chatList').innerHTML = `
+                    <div class="error">Error loading flagged chats: ${error.message}</div>
+                `;
+            }
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                loadFlaggedChats(currentPage - 1);
+            }
+        }
+
+        function nextPage() {
+            loadFlaggedChats(currentPage + 1);
+        }
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAdminAuth();
+            loadStats();
+            loadFlaggedChats();
+        });
+
+        // Refresh data every 30 seconds
+        setInterval(() => {
+            loadStats();
+            loadFlaggedChats(currentPage);
+        }, 30000);
+    </script>
+</body>
+</html> 
