@@ -9,24 +9,46 @@ def detect_crisis_keywords(user_input: str) -> Tuple[bool, str]:
     """
     # Convert input to lowercase for case-insensitive matching
     input_lower = user_input.lower()
-    
-    # Check for suicide/crisis keywords
+
+    # Check for suicidal ideation (SI)
     if detect_suicide_keywords(input_lower):
-        return True, get_crisis_response()
-    
-    # Check for abuse keywords
+        return True, get_crisis_response("SI")
+
+    # Check for experiencing abuse (EA)
     if detect_abuse_keywords(input_lower):
-        return True, get_abuse_response()
-    
+        return True, get_abuse_response("EA")
+
+    # Check for homicidal ideation (HI) - new category
+    if detect_homicidal_keywords(input_lower):
+        return True, get_crisis_response("HI")
+
+    # Check for self-harm (SH) - separate from suicide
+    if detect_self_harm_keywords(input_lower):
+        return True, get_crisis_response("SH")
+
     return False, ""
 
 
 def detect_suicide_keywords(input_lower: str) -> bool:
     """Detect suicide and self-harm related keywords"""
+    # Common false positives to exclude
+    false_positives = [
+        "deadlines", "deadline", "deadly serious", "dead tired", "dead sure",
+        "dead end", "deadly accurate", "dead on", "drop dead gorgeous",
+        "dead heat", "dead weight", "dead ringer", "dead center",
+        "killed it", "killing time", "killer deal", "killer workout",
+        "die hard", "die for", "to die for", "dying to know", "dying laughing"
+    ]
+
+    # Check if input contains false positives
+    for false_positive in false_positives:
+        if false_positive in input_lower:
+            return False
+
     # Crisis keywords in English and Hindi
     crisis_keywords = [
-        "suicide", "kill myself", "want to die", "end my life", 
-        "meri zindagi khatam", "marna chahta", "khudkushi", 
+        "suicide", "kill myself", "want to die", "end my life",
+        "meri zindagi khatam", "marna chahta", "khudkushi",
         "nahi jeena", "i don't want to live", "khatam karna", "mar jaaun",
         "want to end it all", "better off dead", "no reason to live",
         "can't take it anymore", "life is not worth living",
@@ -34,27 +56,29 @@ def detect_suicide_keywords(input_lower: str) -> bool:
         "tired of living", "hate my life", "life is meaningless",
         "death would be better", "want to disappear", "give up on life"
     ]
-    
+
     # Check for exact keyword matches
     for keyword in crisis_keywords:
         if keyword.lower() in input_lower:
             return True
-    
-    # Check for partial matches and variations
+
+    # More specific crisis patterns - only match in concerning contexts
     crisis_patterns = [
-        r'\b(die|death|dead)\b',
-        r'\b(kill|killing)\b',
+        # Only match "die/death/dead" when used in concerning contexts
+        r'\b(want to die|going to die|wish I was dead|better off dead)\b',
+        r'\b(die by suicide|death by suicide)\b',
+        r'\b(kill myself|killing myself)\b',
         r'\b(suicide|suicidal)\b',
-        r'\b(end.*life|life.*end)\b',
-        r'\b(want.*die|die.*want)\b',
+        r'\b(end my life|ending my life)\b',
+        r'\b(take my life|taking my life)\b',
         r'\b(mar.*jaa|jaa.*mar)\b',  # Hindi variations
         r'\b(khatam.*karna|karna.*khatam)\b',  # Hindi variations
     ]
-    
+
     for pattern in crisis_patterns:
         if re.search(pattern, input_lower):
             return True
-    
+
     return False
 
 
@@ -136,29 +160,120 @@ def detect_abuse_keywords(input_lower: str) -> bool:
     return False
 
 
-def get_crisis_response() -> str:
+def detect_homicidal_keywords(input_lower: str) -> bool:
+    """Detect homicidal ideation keywords"""
+    homicidal_keywords = [
+        "want to kill someone", "going to hurt someone", "kill them", "hurt others",
+        "violent thoughts about", "planning to hurt", "revenge against",
+        "make them pay", "going to attack", "want to murder"
+    ]
+
+    homicidal_patterns = [
+        r'\b(kill|murder|hurt)\s+(someone|others|them|him|her)\b',
+        r'\b(violent|revenge)\s+(thoughts|plans)\b',
+        r'\b(planning|going)\s+to\s+(hurt|kill|attack)\b'
+    ]
+
+    # Check keywords
+    for keyword in homicidal_keywords:
+        if keyword in input_lower:
+            return True
+
+    # Check patterns
+    for pattern in homicidal_patterns:
+        if re.search(pattern, input_lower):
+            return True
+
+    return False
+
+
+def detect_self_harm_keywords(input_lower: str) -> bool:
+    """Detect self-harm (non-suicidal) keywords"""
+    self_harm_keywords = [
+        "cut myself", "cutting myself", "self harm", "self-harm",
+        "hurt myself", "burning myself", "scratching myself",
+        "picking at skin", "pulling hair", "hitting myself"
+    ]
+
+    self_harm_patterns = [
+        r'\b(cut|cutting|burn|burning|scratch|scratching)\s+(myself|my)\b',
+        r'\b(self[\-\s]harm|self[\-\s]hurt)\b',
+        r'\b(hit|hitting|punch|punching)\s+myself\b'
+    ]
+
+    # Check keywords
+    for keyword in self_harm_keywords:
+        if keyword in input_lower:
+            return True
+
+    # Check patterns
+    for pattern in self_harm_patterns:
+        if re.search(pattern, input_lower):
+            return True
+
+    return False
+
+
+def get_crisis_response(flag_type: str = "SI") -> str:
     """
-    Return the crisis intervention response.
+    Return the crisis intervention response based on flag type.
     """
-    return """Outlive Chat is a safe space to find peer support and tools to help manage difficult feelings and thoughts of ending your life. Please don't hesitate to reach out—support is just a text away:
+    if flag_type == "SI":
+        return """🚨 **Suicidal Ideation Detected**
+
+Outlive Chat is a safe space to find peer support and tools to help manage difficult feelings and thoughts of ending your life. Please don't hesitate to reach out—support is just a text away:
 
 👉 https://chat.outlive.in/landing-page
 ☎️ More helpline numbers at: https://www.aasra.info/helpline.html
 
 You're not alone, and there are people who want to help you through this difficult time."""
 
+    elif flag_type == "SH":
+        return """🩹 **Self-Harm Concerns Detected**
 
-def get_abuse_response() -> str:
+If you're struggling with self-harm urges, please reach out for support:
+
+• **Kiran Mental Health Helpline**: 1800-599-0019
+• **AASRA**: 022 2754 6669
+• **Emergency Services**: 112
+
+Self-harm is a sign that you're struggling with difficult emotions. Professional support can help you find healthier coping strategies."""
+
+    elif flag_type == "HI":
+        return """⚠️ **Safety Concern Detected**
+
+If you're having thoughts about hurting others, it's important to seek immediate professional help:
+
+• **Police**: 100
+• **Mental Health Crisis Line**: 1800-599-0019
+• **Emergency Services**: 112
+
+These feelings can be addressed with proper support. Please reach out to a mental health professional right away."""
+
+    else:  # Default fallback
+        return """🚨 **Crisis Support Available**
+
+If you're in immediate danger, please contact emergency services:
+
+• **Emergency Services**: 112
+• **Mental Health Helpline**: 1800-599-0019
+
+You're not alone. Professional help is available 24/7."""
+
+
+def get_abuse_response(flag_type: str = "EA") -> str:
     """
-    Return the abuse intervention response.
+    Return the abuse intervention response based on flag type.
     """
-    return """AASRA – We're Here To Help. 💛
+    return """🛡️ **Abuse Concern Detected**
 
-If you're feeling unsafe or in pain, please reach out.
+AASRA – We're Here To Help. 💛
 
-Call AASRA: 022 2754 6669
+If you're feeling unsafe or experiencing abuse, please reach out:
 
-Emergency Numbers:
-• Police: 100 • Women Helpline: 1091 • Child Helpline: 1098
+• **AASRA**: 022 2754 6669
+• **Women Helpline**: 1091
+• **Child Helpline**: 1098
+• **Police**: 100
 
-You're not alone. Help is available.""" 
+Emergency Numbers Available 24/7. You're not alone. Help is available.""" 
