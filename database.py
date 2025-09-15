@@ -100,6 +100,43 @@ class DatabaseInterface(ABC):
         """Delete an access code (soft delete by setting inactive)"""
         pass
 
+    @abstractmethod
+    def save_chat_message(self, user_id: str, access_code: str, role: str, content: str,
+                         session_id: str = None, message_type: str = "normal") -> bool:
+        """Save a chat message to database"""
+        pass
+
+    @abstractmethod
+    def get_chat_history(self, user_id: str, limit: int = 50, session_id: str = None) -> List[Dict[str, Any]]:
+        """Get chat history for a user"""
+        pass
+
+    @abstractmethod
+    def get_all_chats(self, limit: int = 100, offset: int = 0,
+                     access_code: str = None, flag_type: str = None) -> List[Dict[str, Any]]:
+        """Get all chat messages with filtering options"""
+        pass
+
+    @abstractmethod
+    def cleanup_old_chats(self, days: int = 30) -> int:
+        """Clean up old chat messages older than specified days"""
+        pass
+
+    @abstractmethod
+    def record_feeling(self, user_id: str, access_code: str, feeling_score: int) -> bool:
+        """Record a user's daily feeling score (0-10)"""
+        pass
+
+    @abstractmethod
+    def get_feeling_for_today(self, user_id: str) -> Dict[str, Any]:
+        """Get today's feeling record for a user"""
+        pass
+
+    @abstractmethod
+    def get_user_feeling_history(self, user_id: str, days: int = 30) -> List[Dict[str, Any]]:
+        """Get user's feeling history for the last N days"""
+        pass
+
 class SQLiteDatabase(DatabaseInterface):
     """SQLite implementation of the database interface"""
     
@@ -121,7 +158,27 @@ class SQLiteDatabase(DatabaseInterface):
             conn = self._get_connection()
             cursor = conn.cursor()
             
-            # Create flagged chats table
+            # Create comprehensive chat messages table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS chat_messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL,
+                    access_code TEXT NOT NULL,
+                    session_id TEXT,
+                    role TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    message_type TEXT DEFAULT 'normal',
+                    flag_type TEXT,
+                    confidence REAL,
+                    analysis TEXT,
+                    ip_address TEXT,
+                    user_agent TEXT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (access_code) REFERENCES access_codes (code)
+                )
+            ''')
+
+            # Create flagged chats table (legacy - keep for compatibility)
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS flagged_chats (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -189,16 +246,60 @@ class SQLiteDatabase(DatabaseInterface):
                     last_login DATETIME
                 )
             ''')
-            
-            # Create index for faster queries
+
+            # Create feelings tracking table
             cursor.execute('''
-                CREATE INDEX IF NOT EXISTS idx_flagged_chats_timestamp 
-                ON flagged_chats(timestamp)
+                CREATE TABLE IF NOT EXISTS feelings_tracking (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL,
+                    access_code TEXT NOT NULL,
+                    feeling_score INTEGER NOT NULL CHECK (feeling_score >= 0 AND feeling_score <= 10),
+                    date DATE NOT NULL DEFAULT (DATE('now')),
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (access_code) REFERENCES access_codes (code),
+                    UNIQUE(user_id, date)
+                )
             ''')
             
+            # Create indexes for faster queries
             cursor.execute('''
-                CREATE INDEX IF NOT EXISTS idx_flagged_chats_flag_type 
+                CREATE INDEX IF NOT EXISTS idx_chat_messages_timestamp
+                ON chat_messages(timestamp)
+            ''')
+
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id
+                ON chat_messages(user_id)
+            ''')
+
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_chat_messages_access_code
+                ON chat_messages(access_code)
+            ''')
+
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_chat_messages_flag_type
+                ON chat_messages(flag_type)
+            ''')
+
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_flagged_chats_timestamp
+                ON flagged_chats(timestamp)
+            ''')
+
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_flagged_chats_flag_type
                 ON flagged_chats(flag_type)
+            ''')
+
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_feelings_tracking_user_date
+                ON feelings_tracking(user_id, date)
+            ''')
+
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_feelings_tracking_date
+                ON feelings_tracking(date)
             ''')
             
             conn.commit()
@@ -656,22 +757,242 @@ class SQLiteDatabase(DatabaseInterface):
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
-            
+
             cursor.execute('''
-                UPDATE access_codes 
+                UPDATE access_codes
                 SET is_active = FALSE
                 WHERE code = ?
             ''', (code,))
-            
+
             conn.commit()
             conn.close()
             logger.info(f"Access code deleted: {code}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Error deleting access code: {e}")
             return False
+
+    def save_chat_message(self, user_id: str, access_code: str, role: str, content: str,
+                         session_id: str = None, message_type: str = "normal") -> bool:
+        """Save a chat message to SQLite database"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                INSERT INTO chat_messages
+                (user_id, access_code, session_id, role, content, message_type)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (user_id, access_code, session_id, role, content, message_type))
+
+            conn.commit()
+            conn.close()
+            logger.info(f"Chat message saved: {role} message for user {user_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error saving chat message: {e}")
+            return False
+
+    def get_chat_history(self, user_id: str, limit: int = 50, session_id: str = None) -> List[Dict[str, Any]]:
+        """Get chat history for a user from SQLite"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            if session_id:
+                cursor.execute('''
+                    SELECT id, user_id, access_code, role, content, message_type,
+                           flag_type, confidence, timestamp
+                    FROM chat_messages
+                    WHERE user_id = ? AND session_id = ?
+                    ORDER BY timestamp ASC
+                    LIMIT ?
+                ''', (user_id, session_id, limit))
+            else:
+                cursor.execute('''
+                    SELECT id, user_id, access_code, role, content, message_type,
+                           flag_type, confidence, timestamp
+                    FROM chat_messages
+                    WHERE user_id = ?
+                    ORDER BY timestamp ASC
+                    LIMIT ?
+                ''', (user_id, limit))
+
+            rows = cursor.fetchall()
+            columns = [description[0] for description in cursor.description]
+
+            result = []
+            for row in rows:
+                message_dict = dict(zip(columns, row))
+                result.append(message_dict)
+
+            conn.close()
+            return result
+
+        except Exception as e:
+            logger.error(f"Error getting chat history: {e}")
+            return []
+
+    def get_all_chats(self, limit: int = 100, offset: int = 0,
+                     access_code: str = None, flag_type: str = None) -> List[Dict[str, Any]]:
+        """Get all chat messages with filtering options from SQLite"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Build query with filters
+            query = '''
+                SELECT id, user_id, access_code, session_id, role, content,
+                       message_type, flag_type, confidence, analysis, timestamp
+                FROM chat_messages
+                WHERE 1=1
+            '''
+            params = []
+
+            if access_code:
+                query += ' AND access_code = ?'
+                params.append(access_code)
+
+            if flag_type:
+                query += ' AND flag_type = ?'
+                params.append(flag_type)
+
+            query += ' ORDER BY timestamp DESC LIMIT ? OFFSET ?'
+            params.extend([limit, offset])
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [description[0] for description in cursor.description]
+
+            result = []
+            for row in rows:
+                message_dict = dict(zip(columns, row))
+                # Parse JSON analysis if present
+                if message_dict.get('analysis'):
+                    try:
+                        message_dict['analysis'] = json.loads(message_dict['analysis'])
+                    except:
+                        message_dict['analysis'] = {}
+                result.append(message_dict)
+
+            conn.close()
+            return result
+
+        except Exception as e:
+            logger.error(f"Error getting all chats: {e}")
+            return []
+
+    def cleanup_old_chats(self, days: int = 30) -> int:
+        """Clean up old chat messages older than specified days from SQLite"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                DELETE FROM chat_messages
+                WHERE timestamp < datetime('now', '-' || ? || ' days')
+            ''', (days,))
+
+            deleted_count = cursor.rowcount
+            conn.commit()
+            conn.close()
+
+            logger.info(f"Cleaned up {deleted_count} old chat messages")
+            return deleted_count
+
+        except Exception as e:
+            logger.error(f"Error cleaning up old chats: {e}")
+            return 0
     
+    def record_feeling(self, user_id: str, access_code: str, feeling_score: int) -> bool:
+        """Record a user's daily feeling score (0-10) in SQLite"""
+        try:
+            if not (0 <= feeling_score <= 10):
+                logger.error(f"Invalid feeling score: {feeling_score}. Must be 0-10")
+                return False
+
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Use INSERT OR REPLACE to handle the case where user already recorded today
+            cursor.execute('''
+                INSERT OR REPLACE INTO feelings_tracking
+                (user_id, access_code, feeling_score, date)
+                VALUES (?, ?, ?, DATE('now'))
+            ''', (user_id, access_code, feeling_score))
+
+            conn.commit()
+            conn.close()
+            logger.info(f"Feeling recorded: {feeling_score}/10 for user {user_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error recording feeling: {e}")
+            return False
+
+    def get_feeling_for_today(self, user_id: str) -> Dict[str, Any]:
+        """Get today's feeling record for a user from SQLite"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT id, feeling_score, date, timestamp
+                FROM feelings_tracking
+                WHERE user_id = ? AND date = DATE('now')
+            ''', (user_id,))
+
+            row = cursor.fetchone()
+            conn.close()
+
+            if row:
+                return {
+                    'id': row[0],
+                    'feeling_score': row[1],
+                    'date': row[2],
+                    'timestamp': row[3],
+                    'recorded_today': True
+                }
+            else:
+                return {'recorded_today': False}
+
+        except Exception as e:
+            logger.error(f"Error getting today's feeling: {e}")
+            return {'recorded_today': False}
+
+    def get_user_feeling_history(self, user_id: str, days: int = 30) -> List[Dict[str, Any]]:
+        """Get user's feeling history for the last N days from SQLite"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT id, feeling_score, date, timestamp
+                FROM feelings_tracking
+                WHERE user_id = ? AND date >= DATE('now', '-' || ? || ' days')
+                ORDER BY date DESC
+            ''', (user_id, days))
+
+            rows = cursor.fetchall()
+            conn.close()
+
+            history = []
+            for row in rows:
+                history.append({
+                    'id': row[0],
+                    'feeling_score': row[1],
+                    'date': row[2],
+                    'timestamp': row[3]
+                })
+
+            return history
+
+        except Exception as e:
+            logger.error(f"Error getting feeling history: {e}")
+            return []
+
     def close(self):
         """Close SQLite database connection"""
         # No persistent connection to close
@@ -769,6 +1090,21 @@ class PostgreSQLDatabase(DatabaseInterface):
         # PostgreSQL implementation would go here
         pass
     
+    def record_feeling(self, user_id: str, access_code: str, feeling_score: int) -> bool:
+        """Record a user's daily feeling score (0-10)"""
+        # PostgreSQL implementation would go here
+        pass
+
+    def get_feeling_for_today(self, user_id: str) -> Dict[str, Any]:
+        """Get today's feeling record for a user"""
+        # PostgreSQL implementation would go here
+        pass
+
+    def get_user_feeling_history(self, user_id: str, days: int = 30) -> List[Dict[str, Any]]:
+        """Get user's feeling history for the last N days"""
+        # PostgreSQL implementation would go here
+        pass
+
     def close(self):
         """Close PostgreSQL database connection"""
         # PostgreSQL implementation would go here
@@ -866,7 +1202,37 @@ class DatabaseManager:
     def delete_access_code(self, code: str) -> bool:
         """Delete an access code (soft delete by setting inactive)"""
         return self.database.delete_access_code(code)
-    
+
+    def save_chat_message(self, user_id: str, access_code: str, role: str, content: str,
+                         session_id: str = None, message_type: str = "normal") -> bool:
+        """Save a chat message to database"""
+        return self.database.save_chat_message(user_id, access_code, role, content, session_id, message_type)
+
+    def get_chat_history(self, user_id: str, limit: int = 50, session_id: str = None) -> List[Dict[str, Any]]:
+        """Get chat history for a user"""
+        return self.database.get_chat_history(user_id, limit, session_id)
+
+    def get_all_chats(self, limit: int = 100, offset: int = 0,
+                     access_code: str = None, flag_type: str = None) -> List[Dict[str, Any]]:
+        """Get all chat messages with filtering options"""
+        return self.database.get_all_chats(limit, offset, access_code, flag_type)
+
+    def cleanup_old_chats(self, days: int = 30) -> int:
+        """Clean up old chat messages older than specified days"""
+        return self.database.cleanup_old_chats(days)
+
+    def record_feeling(self, user_id: str, access_code: str, feeling_score: int) -> bool:
+        """Record a user's daily feeling score (0-10)"""
+        return self.database.record_feeling(user_id, access_code, feeling_score)
+
+    def get_feeling_for_today(self, user_id: str) -> Dict[str, Any]:
+        """Get today's feeling record for a user"""
+        return self.database.get_feeling_for_today(user_id)
+
+    def get_user_feeling_history(self, user_id: str, days: int = 30) -> List[Dict[str, Any]]:
+        """Get user's feeling history for the last N days"""
+        return self.database.get_user_feeling_history(user_id, days)
+
     def close(self):
         """Close database connection"""
         if self.database:
