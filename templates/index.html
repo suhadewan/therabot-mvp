@@ -92,17 +92,22 @@
             color: white;
         }
 
-        .safety-banner {
+        .safety-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
             background: #1e293b;
-            border: 2px solid #475569;
-            margin: 1rem;
-            padding: 1rem;
-            border-radius: 12px;
+            border-top: 2px solid #475569;
+            padding: 0.75rem 1rem;
             color: #cbd5e1;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+            text-align: center;
+            z-index: 1000;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
         }
 
-        .safety-banner strong {
+        .safety-footer strong {
             color: #e2e8f0;
         }
 
@@ -114,6 +119,7 @@
             margin: 0 auto;
             width: 100%;
             padding: 0 1rem;
+            margin-bottom: 50px; /* Space for footer */
         }
 
         .chat-container {
@@ -123,7 +129,8 @@
             background: #1e293b;
             border-radius: 20px 20px 0 0;
             box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.4);
-            min-height: 70vh;
+            height: calc(100vh - 150px);
+            max-height: calc(100vh - 150px);
             border: 1px solid rgba(71, 85, 105, 0.3);
         }
 
@@ -200,7 +207,7 @@
             flex: 1;
             padding: 1rem;
             overflow-y: auto;
-            max-height: 60vh;
+            min-height: 0;
         }
 
         .message {
@@ -358,17 +365,17 @@
                 flex-direction: column;
                 padding: 0;
             }
-            
+
             .chat-container {
                 border-radius: 0;
                 margin: 0;
                 min-height: 60vh;
             }
-            
+
             .input-container {
                 border-radius: 0;
             }
-            
+
             .message-content {
                 max-width: 85%;
             }
@@ -390,6 +397,11 @@
 
             .hotlines-sidebar .hotline-section:nth-child(even) {
                 margin-right: 0;
+            }
+
+            .safety-footer {
+                font-size: 0.75rem;
+                padding: 0.5rem;
             }
         }
 
@@ -576,19 +588,10 @@
             <button class="logout-button" onclick="logout()">Logout</button>
         </div>
 
-    <div class="safety-banner">
-        ⚠️ <strong>Important Notice</strong>: This is a non-clinical support tool for general mental wellness. If you're experiencing a crisis, please contact emergency services (911) or a crisis hotline immediately.
-    </div>
-
     <div class="main-content">
         <div class="chat-container">
             <div class="messages" id="messages">
-                <div class="message assistant">
-                    <div class="message-avatar">🤖</div>
-                    <div class="message-content">
-                        Hi there! I'm here to listen and support you. How are you feeling today?
-                    </div>
-                </div>
+                <!-- Messages will be loaded from database -->
             </div>
 
             <div class="typing-indicator" id="typing">
@@ -653,6 +656,11 @@
         <button onclick="installApp()">Install</button>
     </div>
 
+    <!-- Safety Footer -->
+    <div class="safety-footer">
+        ⚠️ <strong>Important Notice</strong>: This is a non-clinical support tool for general mental wellness. If you're experiencing a crisis, please refer to the emergency helplines.
+    </div>
+
     <!-- Feelings Thermometer Modal -->
     <div class="feelings-overlay" id="feelingsOverlay">
         <div class="feelings-modal">
@@ -683,33 +691,67 @@
         
         // Load chat history from server
         async function loadChatHistory() {
-            if (!userId) return;
+            if (!userId) {
+                console.log('DEBUG: No userId set, cannot load chat history');
+                return;
+            }
+
+            console.log(`DEBUG: Loading chat history for user: ${userId}`);
 
             try {
                 const response = await fetch(`/api/session/${userId}`);
+                console.log(`DEBUG: API response status: ${response.status}`);
+
                 const data = await response.json();
+                console.log(`DEBUG: API response data:`, data);
+
+                const messagesContainer = document.getElementById('messages');
 
                 if (data.messages && data.messages.length > 0) {
-                    // Clear default message first
-                    const messagesContainer = document.getElementById('messages');
-                    messagesContainer.innerHTML = '';
+                    console.log(`DEBUG: Found ${data.messages.length} previous messages`);
 
                     // Add all previous messages
-                    data.messages.forEach(msg => {
+                    data.messages.forEach((msg, index) => {
+                        console.log(`DEBUG: Adding message ${index + 1}: ${msg.role} - ${msg.content.substring(0, 50)}...`);
                         addMessage(msg.content, msg.role);
                     });
 
-                    console.log(`Loaded ${data.messages.length} previous messages`);
+                    console.log(`✅ Successfully loaded ${data.messages.length} previous messages`);
+                } else {
+                    console.log('DEBUG: No previous messages found, adding initial greeting');
+                    // First time user - add initial greeting and save it to database
+                    const greeting = "Hi there! I'm here to listen and support you. How are you feeling today?";
+                    addMessage(greeting, 'assistant');
+
+                    // Save initial greeting to database
+                    try {
+                        await fetch('/api/chat/init', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                user_id: userId,
+                                message: greeting
+                            })
+                        });
+                        console.log('DEBUG: Initial greeting saved to database');
+                    } catch (error) {
+                        console.error('Error saving initial greeting:', error);
+                    }
                 }
             } catch (error) {
-                console.error('Error loading chat history:', error);
+                console.error('❌ Error loading chat history:', error);
             }
         }
 
         // Check authentication on page load
         function checkAuth() {
             const loginId = localStorage.getItem('mindmitra_login_id');
+            console.log(`DEBUG: Checking auth, loginId from localStorage: ${loginId}`);
+
             if (!loginId) {
+                console.log('DEBUG: No loginId found, redirecting to login');
                 // Redirect to login if not authenticated
                 window.location.href = '/login';
                 return;
@@ -726,12 +768,23 @@
             .then(response => response.json())
             .then(data => {
                 if (data.valid) {
+                    // Check if user needs to consent
+                    if (data.needs_consent) {
+                        console.log('DEBUG: User needs to consent, redirecting to consent page');
+                        window.location.href = '/consent';
+                        return;
+                    }
+                    
                     userId = loginId;
+                    console.log(`DEBUG: Authentication successful, userId set to: ${userId}`);
+
                     // Load user info
                     if (data.user) {
                         console.log('Logged in as:', data.user.login_id);
+                        console.log('Access code:', data.user.access_code);
                     }
                     // Load chat history after successful authentication
+                    console.log('DEBUG: About to load chat history...');
                     loadChatHistory();
                     // Check feelings status after authentication
                     checkFeelingsStatus();
@@ -850,14 +903,21 @@
 
                 if (data.error) {
                     addMessage(`Error: ${data.error}`, 'assistant', 'error');
+                } else if (data.restricted) {
+                    // User has been restricted - log them out
+                    addMessage(data.response, 'assistant', 'error');
+                    setTimeout(() => {
+                        alert('Your access has been restricted due to multiple safety concerns. You will be logged out.');
+                        logout();
+                    }, 2000);
                 } else {
                     // Add bot response
                     addMessage(data.response, 'assistant', data.type);
-                    
-                    // Show crisis resources if needed
-                    if (data.type === 'crisis' || data.type === 'safety_concern') {
-                        showCrisisResources();
-                    }
+
+                    // Note: crisis resources box removed because:
+                    // - LLM safety responses already include helpline numbers in the message
+                    // - Showing both creates duplicate information
+                    // - The message itself is comprehensive enough
                 }
             } catch (error) {
                 addMessage('Sorry, something went wrong. Please try again.', 'assistant', 'error');

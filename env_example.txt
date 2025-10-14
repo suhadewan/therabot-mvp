@@ -1,10 +1,19 @@
-# Twilio Configuration
-TWILIO_ACCOUNT_SID=your_twilio_account_sid_here
-TWILIO_AUTH_TOKEN=your_twilio_auth_token_here
-TWILIO_PHONE_NUMBER=+14155238886
+# Flask Configuration (REQUIRED)
+# Generate a secure key: python3 -c "import secrets; print(secrets.token_hex(32))"
+SECRET_KEY=75dba1110772cafc6ef89b26898fc09217b3c3a64fb9df28bc71d1d7af7e1bd8
 
-# OpenAI Configuration
+# OpenAI Configuration (REQUIRED)
 OPENAI_API_KEY=your_openai_api_key_here
 
-# Optional: Redis for production session storage
-# REDIS_URL=redis://localhost:6379 
+# Database Configuration
+# For development (SQLite - default):
+DATABASE_TYPE=sqlite
+
+# For production (PostgreSQL/Supabase):
+# DATABASE_TYPE=postgresql
+# DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@db.ukaxpymzgbmftnbhgxbs.supabase.co:5432/postgres
+
+# Optional: Twilio Configuration (for SMS features)
+# TWILIO_ACCOUNT_SID=your_twilio_account_sid_here
+# TWILIO_AUTH_TOKEN=your_twilio_auth_token_here
+# TWILIO_PHONE_NUMBER=+14155238886 

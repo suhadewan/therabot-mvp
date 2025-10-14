@@ -48,13 +48,15 @@ def detect_suicide_keywords(input_lower: str) -> bool:
     # Crisis keywords in English and Hindi
     crisis_keywords = [
         "suicide", "kill myself", "want to die", "end my life",
+        "kms", "i'll kms", "imma kms", "gonna kms", "going to kms"  # Internet slang for "kill myself"
         "meri zindagi khatam", "marna chahta", "khudkushi",
         "nahi jeena", "i don't want to live", "khatam karna", "mar jaaun",
         "want to end it all", "better off dead", "no reason to live",
         "can't take it anymore", "life is not worth living",
         "thinking of ending it", "planning to die", "ready to die",
-        "tired of living", "hate my life", "life is meaningless",
-        "death would be better", "want to disappear", "give up on life"
+        "tired of living", "life is meaningless",
+        "death would be better", "give up on life",
+        "going to jump", "gonna jump"  # Common suicide method references
     ]
 
     # Check for exact keyword matches
