@@ -221,6 +221,7 @@ class SQLiteDatabase(DatabaseInterface):
                 CREATE TABLE IF NOT EXISTS flagged_chats (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id TEXT NOT NULL,
+                    access_code TEXT,
                     message TEXT NOT NULL,
                     flag_type TEXT NOT NULL,
                     confidence REAL NOT NULL,
@@ -1493,6 +1494,7 @@ class PostgreSQLDatabase(DatabaseInterface):
                 CREATE TABLE IF NOT EXISTS flagged_chats (
                     id SERIAL PRIMARY KEY,
                     user_id TEXT NOT NULL,
+                    access_code TEXT,
                     message TEXT NOT NULL,
                     flag_type TEXT NOT NULL,
                     confidence REAL NOT NULL,
@@ -1635,6 +1637,7 @@ class PostgreSQLDatabase(DatabaseInterface):
                 CREATE TABLE IF NOT EXISTS flagged_chats (
                     id SERIAL PRIMARY KEY,
                     user_id TEXT NOT NULL,
+                    access_code TEXT,
                     message TEXT NOT NULL,
                     flag_type TEXT NOT NULL,
                     confidence REAL NOT NULL,
