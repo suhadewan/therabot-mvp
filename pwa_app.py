@@ -93,6 +93,22 @@ if os.getenv('ENVIRONMENT') == 'production':
 import openai
 openai_client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
+# Initialize database at module load time (works with both gunicorn and python pwa_app.py)
+logger.info("Initializing database...")
+db_type = os.getenv('DATABASE_TYPE', 'sqlite')
+logger.info(f"Using database type: {db_type}")
+
+if db_type == 'postgresql':
+    db_url = os.getenv('DATABASE_URL')
+    if not db_url:
+        logger.error("DATABASE_URL not found but DATABASE_TYPE is postgresql")
+        raise ValueError("DATABASE_URL environment variable required for PostgreSQL")
+    db_manager = init_database(db_type, connection_string=db_url)
+else:
+    db_manager = init_database(db_type)
+
+logger.info(f"Database initialized successfully: {db_manager.db_type}")
+
 # Initialize Memory Manager
 memory_manager = None
 
@@ -1228,39 +1244,10 @@ def admin_feelings():
         return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == '__main__':
-    # Check required environment variables
-    if not os.getenv('OPENAI_API_KEY'):
-        print("Missing OPENAI_API_KEY environment variable")
-        print("Please set it in your .env file")
-        exit(1)
-    
+    # Database is already initialized at module load time
     print("Starting MindMitra PWA...")
-    
-    # Initialize database
-    try:
-        print("Initializing database...")
-        # Get database type from environment variable
-        db_type = os.getenv('DATABASE_TYPE', 'sqlite')
-        print(f"Using database type: {db_type}")
-        
-        # If PostgreSQL, pass the DATABASE_URL
-        if db_type == 'postgresql':
-            db_url = os.getenv('DATABASE_URL')
-            if not db_url:
-                raise ValueError("DATABASE_URL not found in .env file")
-            db_manager = init_database(db_type, connection_string=db_url)
-        else:
-            db_manager = init_database(db_type)
-        
-        print("Database initialized successfully")
-        print(f"Database type: {db_manager.db_type}")
-        print(f"Database instance: {db_manager.database}")
-    except Exception as e:
-        print(f"Database initialization failed: {e}")
-        import traceback
-        traceback.print_exc()
-        exit(1)
-    
+    print(f"Database type: {db_manager.db_type}")
+
     # Run Flask app
     port = int(os.getenv('PORT', 5002))
     app.run(debug=False, host='0.0.0.0', port=port) 
