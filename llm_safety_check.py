@@ -9,37 +9,37 @@ def analyze_content_with_llm(user_input: str, client: Any) -> Tuple[bool, str, D
     """
     
     analysis_prompt = f"""
-You are a mental health safety analyst. Analyze the following user input for concerning content related to:
-1. Suicide/self-harm (including passive thoughts)
-2. Abuse (physical, sexual, emotional, verbal) - including phrases like "he hurt me", "she hit me", "they beat me", "physically hurt", "abused me"
-3. Crisis situations (feeling unsafe, in danger)
-4. Severe mental health distress
+You are a mental health safety analyst for a student support chatbot. Analyze the following user input for concerning content.
 
 User input: "{user_input}"
 
-Respond with a JSON object containing:
+IMPORTANT CONTEXT:
+- Users are students discussing academic stress, exams, work, relationships, etc.
+- Words like "overwhelmed", "stressed", "tired", "anxious" are NORMAL in academic contexts
+- Only flag SERIOUS concerns that indicate immediate danger or abuse
+
+Mark as concerning ONLY if:
+1. Suicide/self-harm: Active thoughts of ending life, self-harm plans, or statements like "I want to die", "I'm going to kill myself"
+2. Abuse: Current physical, sexual, or emotional abuse - phrases like "he hit me", "she hurt me", "I was beaten", "I was molested"
+3. Crisis: Immediate safety concerns - "I'm in danger", "I feel unsafe", "someone is threatening me"
+4. Severe distress: Complete hopelessness with no will to live - "no point in living", "nothing matters anymore"
+
+DO NOT flag for:
+- Normal academic stress: "overwhelmed with work", "stressed about exams", "tired from studying"
+- General anxiety: "worried", "nervous", "anxious about test"
+- Minor relationship issues: "fight with friend", "argument with parent"
+
+Respond with JSON:
 {{
     "is_concerning": true/false,
     "concern_type": "suicide"|"abuse"|"crisis"|"distress"|"none",
     "confidence": 0.0-1.0,
-    "reasoning": "brief explanation of why this is concerning",
+    "reasoning": "brief explanation",
     "severity": "low"|"medium"|"high"|"critical",
     "response_needed": true/false
 }}
 
-IMPORTANT: Be very sensitive to abuse indicators. Mark as concerning if the user mentions:
-- Being hurt by someone (physically, emotionally, sexually)
-- Violence or abuse from family, partner, or others
-- Feeling unsafe or in danger
-- Being controlled or threatened
-
-Only mark as concerning if you have high confidence (>0.7) that the content indicates:
-- Active suicidal thoughts or plans
-- Current abuse or violence (including "he hurt me", "she hit me", etc.)
-- Immediate safety concerns
-- Severe mental health crisis
-
-Be conservative - false positives are better than missing real concerns.
+Be specific and careful - avoid false positives for normal student stress.
 """
 
     try:
@@ -90,12 +90,13 @@ def simple_fallback_check(user_input: str) -> Tuple[bool, str, Dict[str, Any]]:
     """
     input_lower = user_input.lower()
     
-    # Basic concerning patterns
+    # Basic concerning patterns - ONLY for serious cases
+    # Note: "overwhelmed" removed as it's too common in academic stress contexts
     concerning_patterns = [
-        ("suicide", ["suicide", "kill myself", "want to die", "end my life"]),
-        ("abuse", ["hit me", "beat me", "abuse", "rape", "molest", "harass"]),
-        ("crisis", ["unsafe", "danger", "afraid", "scared", "terrified"]),
-        ("distress", ["can't take it", "overwhelmed", "hopeless", "desperate"])
+        ("suicide", ["suicide", "kill myself", "want to die", "end my life", "better off dead"]),
+        ("abuse", ["hit me", "beat me", "physically hurt me", "rape", "molest", "harass", "he hurt me", "she hurt me"]),
+        ("crisis", ["unsafe", "in danger", "afraid for my life", "terrified"]),
+        ("distress", ["can't take it anymore", "no point in living", "nothing to live for", "completely hopeless"])
     ]
     
     for concern_type, keywords in concerning_patterns:

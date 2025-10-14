@@ -198,9 +198,7 @@
         <div class="info-box">
             <h4>How to get an Access Code:</h4>
             <ul>
-                <li>Contact your school counselor or teacher</li>
-                <li>Ask your mental health professional</li>
-                <li>Request from your educational institution</li>
+                Your access code was emailed to you by delhiunivstudy@gmail.com
             </ul>
             <p style="margin-top: 0.75rem; font-size: 0.8rem; color: #cbd5e1;">
                 Access codes are provided to ensure safe, authorized use of MindMitra.
@@ -230,8 +228,14 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.valid) {
-                        // Redirect to chat
-                        window.location.href = '/';
+                        // Check if user needs to consent
+                        if (data.needs_consent) {
+                            // Redirect to consent page
+                            window.location.href = '/consent';
+                        } else {
+                            // Already consented, go to chat
+                            window.location.href = '/';
+                        }
                     } else {
                         // Clear invalid session
                         localStorage.removeItem('mindmitra_login_id');
@@ -291,9 +295,15 @@
                     
                     showSuccess('Login successful! Redirecting...');
                     
-                    // Redirect to chat after short delay
+                    // Check if user needs to consent
                     setTimeout(() => {
-                        window.location.href = '/';
+                        if (data.needs_consent) {
+                            // Redirect to consent page
+                            window.location.href = '/consent';
+                        } else {
+                            // Already consented, go to chat
+                            window.location.href = '/';
+                        }
                     }, 1000);
                     
                 } else {

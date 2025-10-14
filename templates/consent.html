@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Consent - MindMitra</title>
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            min-height: 100vh;
+            padding: 1rem;
+            line-height: 1.6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .consent-container {
+            max-width: 800px;
+            max-height: 90vh;
+            margin: 0 auto;
+            background: rgba(30, 41, 59, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            border: 1px solid rgba(71, 85, 105, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .consent-header {
+            background: rgba(15, 23, 42, 0.95);
+            color: #e2e8f0;
+            padding: 1.5rem;
+            text-align: center;
+            border-bottom: 2px solid rgba(217, 119, 6, 0.3);
+            flex-shrink: 0;
+        }
+        
+        .consent-header h1 {
+            font-size: 1.75rem;
+            margin-bottom: 0.25rem;
+            color: #fbbf24;
+        }
+        
+        .consent-header p {
+            font-size: 1rem;
+            opacity: 0.95;
+            color: #cbd5e1;
+        }
+        
+        .consent-content {
+            padding: 1.5rem;
+            overflow-y: auto;
+            background: #1e293b;
+            flex: 1;
+            min-height: 0;
+        }
+        
+        .consent-section {
+            margin-bottom: 2rem;
+        }
+        
+        .consent-section h2 {
+            color: #fbbf24;
+            font-size: 1.3rem;
+            margin-bottom: 0.75rem;
+            border-bottom: 2px solid #475569;
+            padding-bottom: 0.5rem;
+        }
+        
+        .consent-section h3 {
+            color: #fcd34d;
+            font-size: 1.1rem;
+            margin: 1rem 0 0.5rem 0;
+        }
+        
+        .consent-section p {
+            color: #cbd5e1;
+            margin-bottom: 0.75rem;
+        }
+        
+        .consent-section ul {
+            margin-left: 2rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .consent-section li {
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+        }
+        
+        .key-info-box {
+            background: rgba(15, 23, 42, 0.8);
+            border-left: 4px solid #d97706;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            border-radius: 8px;
+        }
+        
+        .key-info-box h2 {
+            color: #fbbf24;
+            border: none;
+            padding: 0;
+            margin-bottom: 1rem;
+        }
+        
+        .key-info-box h3 {
+            color: #fcd34d;
+        }
+        
+        .key-info-box p {
+            color: #e2e8f0;
+        }
+        
+        .key-info-box ul {
+            color: #cbd5e1;
+        }
+        
+        .key-info-box li {
+            color: #cbd5e1;
+        }
+        
+        .key-info-box strong {
+            color: #fbbf24;
+        }
+        
+        .consent-footer {
+            background: rgba(15, 23, 42, 0.95);
+            padding: 1.5rem;
+            border-top: 1px solid rgba(71, 85, 105, 0.3);
+            flex-shrink: 0;
+        }
+        
+        .consent-question {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 1.5rem;
+        }
+        
+        .consent-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .consent-btn {
+            padding: 1rem 3rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 150px;
+        }
+        
+        .btn-accept {
+            background: #d97706;
+            color: white;
+        }
+        
+        .btn-accept:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(217, 119, 6, 0.5);
+            background: #f59e0b;
+        }
+        
+        .btn-decline {
+            background: #475569;
+            color: #e2e8f0;
+        }
+        
+        .btn-decline:hover {
+            background: #334155;
+        }
+        
+        .contact-info {
+            background: rgba(217, 119, 6, 0.1);
+            border-left: 4px solid #d97706;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+        
+        .contact-info strong {
+            color: #fbbf24;
+        }
+        
+        .contact-info a {
+            color: #fcd34d;
+            text-decoration: underline;
+        }
+        
+        .contact-info a:hover {
+            color: #fbbf24;
+        }
+        
+        /* Scrollbar styling */
+        .consent-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .consent-content::-webkit-scrollbar-track {
+            background: #0f172a;
+            border-radius: 10px;
+        }
+        
+        .consent-content::-webkit-scrollbar-thumb {
+            background: #d97706;
+            border-radius: 10px;
+        }
+        
+        .consent-content::-webkit-scrollbar-thumb:hover {
+            background: #f59e0b;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 0.5rem;
+            }
+            
+            .consent-container {
+                max-height: 95vh;
+            }
+            
+            .consent-header {
+                padding: 1rem;
+            }
+            
+            .consent-header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .consent-header p {
+                font-size: 0.9rem;
+            }
+            
+            .consent-content {
+                padding: 1rem;
+            }
+            
+            .consent-footer {
+                padding: 1rem;
+            }
+            
+            .consent-btn {
+                padding: 0.875rem 2rem;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="consent-container">
+        <div class="consent-header">
+            <h1>Research Study Informed Consent</h1>
+            <p>MindMitra - Undergraduate Student Well-Being Study</p>
+        </div>
+        
+        <div class="consent-content">
+            <div class="key-info-box">
+                <h2>Key Information</h2>
+                <p>The following is a short summary of this study to help you decide whether to be a part of this study. More detailed information is listed below.</p>
+                
+                <h3>Why am I being invited to take part in a research study?</h3>
+                <p>We invite you to take part in a research study because you filled out our survey titled Undergraduate Student Well-Being Study Baseline Survey.</p>
+                
+                <h3>What should I know about a research study?</h3>
+                <ul>
+                    <li>Someone will explain this research study to you.</li>
+                    <li>Whether or not you take part is up to you.</li>
+                    <li>Your participation is completely voluntary.</li>
+                    <li>You can choose not to take part.</li>
+                    <li>You can agree to take part and later change your mind.</li>
+                    <li>Your decision will not be held against you.</li>
+                    <li>Your refusal to participate will not result in any consequences or any loss of benefits that you are otherwise entitled to receive.</li>
+                    <li>You can ask all the questions you want before you decide.</li>
+                </ul>
+                
+                <h3>Why is this research being done?</h3>
+                <p>In the survey, we realized there is a gap in students' wellbeing support. We wish to introduce an AI chatbot called "MindMitra" that is designed for use by Indian undergraduate students. If you have any personal concerns about academics, future career, or personal life, you can text with MindMitra to sort through your thoughts. <strong>Please don't enter sensitive information, as this is an AI chatbot and not an actual therapist. AI can make mistakes, please double check important information.</strong> MindMitra is not a diagnosis or treatment tool as it is not meant to substitute professional mental health help but rather provide a Mitra or friend.</p>
+                
+                <h3>How long will the research last and what will I need to do?</h3>
+                <p>We will give you free access to MindMitra for <strong>4 weeks</strong>. You will be asked to use a unique access code generated only for you. Please do not share this code with anyone. We will remind you how many days of free access you have left over email.</p>
+                
+                <h3>Is there any way being in this study could be bad for me?</h3>
+                <p>We believe the risks from participating in the study are low. However, since you might want to discuss your personal issues with MindMitra, some of the conversations might make you feel uncomfortable or generate emotional distress.</p>
+                
+                <h3>Will being in this study help me in any way?</h3>
+                <p>We cannot promise any benefits to you or others from your taking part in this research. However, possible benefits include access to MindMitra who is ready to listen to your problems.</p>
+                
+                <h3>What happens if I do not want to be in this research?</h3>
+                <p>Participation in research is completely voluntary. You can decide to participate, not participate, or discontinue participation at any time without penalty or loss of benefits to which you are otherwise entitled.</p>
+            </div>
+            
+            <div class="consent-section">
+                <h2>Detailed Information</h2>
+                <p>The following is more detailed information about this study in addition to the information listed above.</p>
+                
+                <h3>What is the purpose of this research?</h3>
+                <p>This is a part of the DCAC-Student Experience Survey. We understand that undergraduate studies can be both a stressful time for students as well as a period of immense personal growth. We are trying to help college students like you to make sense of all the stress and anxiety that you may experience at this time. We have randomly selected some students who filled our survey to try out MindMitra. This study is to test out how effective MindMitra might be in helping you manage your academic and personal stress. We have developed MindMitra with the help of Indian psychology professionals.</p>
+                
+                <h3>How long will I take part in this research?</h3>
+                <p>We will offer you free access to MindMitra for 4 weeks.</p>
+                
+                <h3>What happens if I say yes, I want to be in this research?</h3>
+                <p>If you say yes to using MindMitra, you will have online access to it 24x7 for 4 weeks. You may wish to engage with as much or as little as you want. We will monitor your usage of MindMitra, including the content of your chats. To best protect your privacy, we ask you not to share sensitive information such as addresses, health information, or any health diagnoses. Throughout this process you will interact with the chatbot which has been built by the study team.</p>
+                <p>If you sign-up using your unique access code, we will be able to link this to your Undergraduate Student Well-Being Baseline Survey. Please note that this is necessary to track how often students engage with MindMitra.</p>
+                
+                <h3>What happens if I say yes, but I change my mind later?</h3>
+                <p>You can stop using MindMitra at any time; it will not be held against you, nor will we reach out to understand why you stopped using it. You can use it for as little as 1 hour and decide to stop using it. We will have access to the data until the time you stop using it.</p>
+                
+                <h3>Is there any way being in this study could be bad for me? (Detailed Risks)</h3>
+                <p>There are some risks you might experience from being in this study. They are:</p>
+                <ul>
+                    <li><strong>Psychological risks:</strong> Since we are asking you to interact with MindMitra where you may discuss professional, academic, and/or personal issues, there is a risk of feeling uncomfortable or emotional distress. In case this happens, you can choose to stop using MindMitra. There is also some information at the end of this consent which will direct you to established mental health resources.</li>
+                    <li><strong>Risk of Artificial Intelligence:</strong> MindMitra is developed using AI tools that can be prone to hallucinations. To protect you against this, we remind you not to treat it as a real friend. We are also monitoring the chats closely to ensure that the information provided by MindMitra does not lead to emotional distress. Please don't enter sensitive information, as this is an AI chatbot and not an actual therapist. AI can make mistakes, please double check important information. MindMitra is not a diagnosis or treatment tool.</li>
+                    <li><strong>Privacy risks:</strong> Your conversations with MindMitra are visible to the study team. However, the chat history will only be linked to your access code during storage and never your name. Importantly, we will not share your chats with anyone.</li>
+                </ul>
+                
+                <h3>If I take part in this research, how will my privacy be protected? What happens to the information you collect?</h3>
+                <p>Efforts will be made to limit the use and disclosure of your Personal Information, including the conversation you have with MindMitra. We cannot promise complete secrecy. Organizations that may inspect and copy your information include the IRB and other representatives of this organization. Only the study team members can see any Personal Information data that you text to MindMitra. If you do not mention any Personal Information, then your privacy can be better maintained. Your information collected as part of this research will not be used or distributed for future research studies, even if all your identifiers are removed. Your name and chat history will be removed from any data you provide before they are shared with other researchers. Researchers cannot easily link your identifying information to the data and biospecimens.</p>
+                
+                <h3>Can I be removed from the research without my OK?</h3>
+                <p>The person in charge of the research study can remove you from the research study without your approval. The main way this can happen is if MindMitra triggers psychological distress. This is to ensure you are not harmed as a result of this study. We will reach out to you by email or text when we decide to remove you from the study. In this email we will ask you if you want to delete your chat history and we shall follow your wishes. If we do store the data after unenrollment, this data will not be linked to you. However, we will note down your roll number to ensure that we do not mistakenly re-enroll you into our study during future rounds of surveying.</p>
+                
+                <h3>What else do I need to know?</h3>
+                <p>This research is being funded by various internal grants from the Harvard Kennedy School.</p>
+            </div>
+            
+            <div class="consent-section">
+                <h2>Who can I talk to?</h2>
+                
+                <div class="contact-info">
+                    <p><strong>Research Team Contact:</strong></p>
+                    <p>If you have questions, concerns, or complaints, or think the research has hurt you, talk to the research team at:</p>
+                    <p>📧 Email: <a href="mailto:delhiunivstudy@gmail.com">delhiunivstudy@gmail.com</a></p>
+                    <p>📝 Anonymous Feedback: <a href="https://docs.google.com/forms/d/e/1FAIpQLScJjTCH7nRmKXQPer4EBnFENV51O_WL7QEMlLLtMkFPIMbjUg/viewform" target="_blank">Feedback Survey</a> or <a href="https://shorturl.at/3qT68" target="_blank">https://shorturl.at/3qT68</a></p>
+                    <p>If you wish to un-enroll from the larger Undergraduate Student Experience Study or provide any feedback, or have any questions, please contact us at the above email.</p>
+                </div>
+                
+                <div class="contact-info">
+                    <p><strong>Harvard IRB Contact:</strong></p>
+                    <p>This research has been reviewed and approved by the Harvard University Area Institutional Review Board ("IRB"). You may talk to them at:</p>
+                    <p>📞 Phone: (617) 496-2847</p>
+                    <p>📧 Email: <a href="mailto:cuhs@harvard.edu">cuhs@harvard.edu</a></p>
+                    <p><strong>Contact the IRB if:</strong></p>
+                    <ul>
+                        <li>Your questions, concerns, or complaints are not being answered by the research team.</li>
+                        <li>You cannot reach the research team.</li>
+                        <li>You want to talk to someone besides the research team.</li>
+                        <li>You have questions about your rights as a research subject.</li>
+                        <li>You want to get information or provide input about this research.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="consent-footer">
+            <p class="consent-question">By clicking "Yes, I Consent", you will be consenting to all the above information. Do you wish to proceed?</p>
+            <div class="consent-buttons">
+                <button class="consent-btn btn-accept" onclick="submitConsent(true)">Yes, I Consent</button>
+                <button class="consent-btn btn-decline" onclick="submitConsent(false)">No, I Decline</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Check authentication on page load
+        function checkAuth() {
+            const loginId = localStorage.getItem('mindmitra_login_id');
+            if (!loginId) {
+                // Not logged in, redirect to login
+                window.location.href = '/login';
+                return;
+            }
+        }
+
+        async function submitConsent(accepted) {
+            try {
+                // Get user_id from localStorage
+                const loginId = localStorage.getItem('mindmitra_login_id');
+
+                const response = await fetch('/api/consent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        consent_accepted: accepted,
+                        user_id: loginId,
+                        access_code: loginId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    if (accepted) {
+                        // Redirect to chat
+                        window.location.href = '/';
+                    } else {
+                        // User declined - clear local storage and redirect to login
+                        localStorage.removeItem('mindmitra_login_id');
+                        localStorage.removeItem('mindmitra_user_type');
+
+                        // Redirect to login (no alert - just go back)
+                        window.location.href = '/login';
+                    }
+                } else {
+                    alert('Error saving consent: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error submitting consent:', error);
+                alert('Error submitting consent. Please try again.');
+            }
+        }
+
+        // Check auth on page load
+        checkAuth();
+    </script>
+</body>
+</html>
+
