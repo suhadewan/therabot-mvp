@@ -402,6 +402,67 @@
             background: #fef2f2;
             color: #dc2626;
         }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h3 {
+            color: #374151;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6b7280;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            color: #374151;
+        }
+
+        .btn-small {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
@@ -483,6 +544,37 @@
                     <div class="loading">Loading access codes...</div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Edit Access Code Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Access Code</h3>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <form id="editAccessCodeForm">
+                <div class="form-group">
+                    <label for="edit_code">Access Code</label>
+                    <input type="text" id="edit_code" readonly style="background: #f3f4f6; cursor: not-allowed;">
+                </div>
+                <div class="form-group">
+                    <label for="edit_max_uses">Maximum Uses</label>
+                    <input type="number" id="edit_max_uses" min="1" required>
+                    <small style="color: #6b7280; display: block; margin-top: 0.5rem;">
+                        Change the maximum number of times this code can be used
+                    </small>
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
+                    <button type="button" onclick="closeEditModal()" class="btn" style="background: #e5e7eb; color: #374151;">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -691,11 +783,15 @@
                                 <span class="status-badge ${code.is_active ? 'active' : 'inactive'}">
                                     ${code.is_active ? 'Active' : 'Inactive'}
                                 </span>
-                                <button onclick="toggleAccessCode('${code.code}', ${!code.is_active})" 
-                                        class="btn ${code.is_active ? 'btn-danger' : 'btn-success'}">
+                                <button onclick="openEditModal('${code.code}', ${code.max_uses})"
+                                        class="btn btn-primary btn-small">
+                                    Edit
+                                </button>
+                                <button onclick="toggleAccessCode('${code.code}', ${!code.is_active})"
+                                        class="btn btn-small ${code.is_active ? 'btn-danger' : 'btn-success'}">
                                     ${code.is_active ? 'Deactivate' : 'Activate'}
                                 </button>
-                                <button onclick="deleteAccessCode('${code.code}')" class="btn btn-danger">
+                                <button onclick="deleteAccessCode('${code.code}')" class="btn btn-danger btn-small">
                                     Delete
                                 </button>
                             </div>
@@ -738,14 +834,14 @@
             if (!confirm(`Are you sure you want to delete access code ${code}?`)) {
                 return;
             }
-            
+
             try {
                 const response = await fetch(`/admin/access-codes/${code}`, {
                     method: 'DELETE'
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     alert(result.message);
                     loadAccessCodes();
@@ -756,6 +852,60 @@
                 alert('Error deleting access code: ' + error.message);
             }
         }
+
+        // Edit access code modal functions
+        function openEditModal(code, currentMaxUses) {
+            document.getElementById('edit_code').value = code;
+            document.getElementById('edit_max_uses').value = currentMaxUses;
+            document.getElementById('editModal').classList.add('show');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('show');
+            document.getElementById('editAccessCodeForm').reset();
+        }
+
+        // Handle edit form submission
+        document.getElementById('editAccessCodeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const code = document.getElementById('edit_code').value;
+            const maxUses = parseInt(document.getElementById('edit_max_uses').value);
+
+            if (maxUses < 1) {
+                alert('Maximum uses must be at least 1');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/admin/access-codes/${code}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ max_uses: maxUses })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(result.message);
+                    closeEditModal();
+                    loadAccessCodes();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error updating access code: ' + error.message);
+            }
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('editModal').addEventListener('click', (e) => {
+            if (e.target.id === 'editModal') {
+                closeEditModal();
+            }
+        });
     </script>
 </body>
 </html> 
