@@ -248,6 +248,8 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
     try:
         db = get_database()
         db.save_chat_message(user_id, access_code, "user", message_text)
+        # Update streak when user sends a message
+        db.update_streak(user_id, access_code)
     except Exception as e:
         print(f"Error saving user message: {e}")
     
@@ -1184,6 +1186,71 @@ def get_user_summaries(user_id):
     except Exception as e:
         print(f"Error getting summaries: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/streak/<user_id>')
+def get_streak(user_id):
+    """Get user's streak information"""
+    try:
+        if not user_id:
+            return jsonify({"error": "User ID is required"}), 400
+
+        db = get_database()
+        streak_data = db.get_streak_data(user_id)
+
+        return jsonify({
+            "success": True,
+            "streak_data": streak_data
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting streak data: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/streak/freeze', methods=['POST'])
+def freeze_streak():
+    """Freeze a streak for a specific date"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        freeze_date = data.get('freeze_date')
+        
+        if not user_id or not freeze_date:
+            return jsonify({"error": "User ID and freeze date are required"}), 400
+
+        access_code = user_id  # user_id IS the access_code
+        db = get_database()
+        result = db.freeze_streak(user_id, access_code, freeze_date)
+
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"Error freezing streak: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/streak/freeze-status/<user_id>')
+def get_freeze_status(user_id):
+    """Get user's freeze status for current week"""
+    try:
+        if not user_id:
+            return jsonify({"error": "User ID is required"}), 400
+
+        db = get_database()
+        freeze_status = db.get_freeze_status(user_id)
+
+        return jsonify({
+            "success": True,
+            "freeze_status": freeze_status
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting freeze status: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error"}), 500
 
 @app.route('/admin/feelings')
 def admin_feelings():

@@ -175,6 +175,26 @@ class DatabaseInterface(ABC):
         """Save user's consent decision"""
         pass
 
+    @abstractmethod
+    def update_streak(self, user_id: str, access_code: str) -> bool:
+        """Update user's streak for today"""
+        pass
+
+    @abstractmethod
+    def get_streak_data(self, user_id: str) -> Dict[str, Any]:
+        """Get user's streak information including current streak and weekly activity"""
+        pass
+
+    @abstractmethod
+    def freeze_streak(self, user_id: str, access_code: str, freeze_date: str) -> Dict[str, Any]:
+        """Freeze the streak for a specific date (max 1 per week)"""
+        pass
+
+    @abstractmethod
+    def get_freeze_status(self, user_id: str) -> Dict[str, Any]:
+        """Get information about user's freeze usage this week"""
+        pass
+
 class SQLiteDatabase(DatabaseInterface):
     """SQLite implementation of the database interface"""
     
@@ -331,6 +351,21 @@ class SQLiteDatabase(DatabaseInterface):
                     FOREIGN KEY (access_code) REFERENCES access_codes (code)
                 )
             ''')
+
+            # Create streak tracking table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS streak_tracking (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL,
+                    access_code TEXT NOT NULL,
+                    activity_date DATE NOT NULL DEFAULT (DATE('now')),
+                    message_count INTEGER DEFAULT 0,
+                    is_freeze BOOLEAN DEFAULT 0,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (access_code) REFERENCES access_codes (code),
+                    UNIQUE(user_id, activity_date)
+                )
+            ''')
             
             # Create indexes for faster queries
             cursor.execute('''
@@ -366,6 +401,16 @@ class SQLiteDatabase(DatabaseInterface):
             cursor.execute('''
                 CREATE INDEX IF NOT EXISTS idx_feelings_tracking_date
                 ON feelings_tracking(date)
+            ''')
+
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_streak_tracking_user_date
+                ON streak_tracking(user_id, activity_date)
+            ''')
+
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_streak_tracking_date
+                ON streak_tracking(activity_date)
             ''')
             
             conn.commit()
@@ -1318,6 +1363,287 @@ class SQLiteDatabase(DatabaseInterface):
         except Exception as e:
             logger.error(f"Error saving user consent: {e}")
             return False
+
+    def update_streak(self, user_id: str, access_code: str) -> bool:
+        """Update user's streak for today"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            # Get today's date
+            today = datetime.now().date().isoformat()
+            
+            # Check if entry exists for today
+            cursor.execute('''
+                SELECT message_count FROM streak_tracking
+                WHERE user_id = ? AND activity_date = ?
+            ''', (user_id, today))
+            
+            existing = cursor.fetchone()
+            
+            if existing:
+                # Increment message count for today
+                cursor.execute('''
+                    UPDATE streak_tracking
+                    SET message_count = message_count + 1,
+                        timestamp = CURRENT_TIMESTAMP
+                    WHERE user_id = ? AND activity_date = ?
+                ''', (user_id, today))
+            else:
+                # Create new entry for today
+                cursor.execute('''
+                    INSERT INTO streak_tracking (user_id, access_code, activity_date, message_count)
+                    VALUES (?, ?, ?, 1)
+                ''', (user_id, access_code, today))
+            
+            conn.commit()
+            conn.close()
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating streak: {e}")
+            return False
+
+    def get_streak_data(self, user_id: str) -> Dict[str, Any]:
+        """Get user's streak information including current streak and weekly activity"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            # Get all activity dates for this user, ordered by date desc
+            cursor.execute('''
+                SELECT activity_date, message_count, is_freeze
+                FROM streak_tracking
+                WHERE user_id = ?
+                ORDER BY activity_date DESC
+            ''', (user_id,))
+            
+            activity_records = cursor.fetchall()
+            conn.close()
+            
+            if not activity_records:
+                return {
+                    'current_streak': 0,
+                    'longest_streak': 0,
+                    'total_days': 0,
+                    'weekly_activity': {},
+                    'frozen_days': {},
+                    'has_activity_today': False
+                }
+            
+            # Calculate current streak
+            current_streak = 0
+            today = datetime.now().date()
+            from datetime import timedelta
+            check_date = today
+            
+            # Parse records: activity_dates for streak calculation, frozen_days for display
+            activity_dates = [datetime.fromisoformat(record[0]).date() for record in activity_records]
+            frozen_days_set = {datetime.fromisoformat(record[0]).date() for record in activity_records if record[2]}
+            
+            # Check if they have activity today or yesterday (for streak continuation)
+            has_activity_today = today in activity_dates
+            yesterday = today - timedelta(days=1)
+            has_activity_yesterday = yesterday in activity_dates
+            
+            # Calculate current streak
+            # Start from today if they have activity, otherwise start from yesterday if they have activity there
+            # This gives users until end of day to maintain their streak
+            check_date = today
+            if not has_activity_today and has_activity_yesterday:
+                # They haven't posted today yet, but posted yesterday - streak is still alive
+                check_date = yesterday
+            elif not has_activity_today and not has_activity_yesterday:
+                # No activity today or yesterday - streak is broken
+                current_streak = 0
+                check_date = None
+            
+            # Count consecutive days backwards
+            while check_date and check_date in activity_dates:
+                current_streak += 1
+                check_date = check_date - timedelta(days=1)
+            
+            # Calculate longest streak
+            longest_streak = 0
+            temp_streak = 1
+            
+            for i in range(len(activity_dates) - 1):
+                days_diff = (activity_dates[i] - activity_dates[i + 1]).days
+                if days_diff == 1:
+                    temp_streak += 1
+                    longest_streak = max(longest_streak, temp_streak)
+                else:
+                    longest_streak = max(longest_streak, temp_streak)
+                    temp_streak = 1
+            
+            longest_streak = max(longest_streak, temp_streak, current_streak)
+            
+            # Get weekly activity (current week: Monday to Sunday)
+            from datetime import timedelta
+            weekly_activity = {}
+            frozen_days = {}
+            
+            # Find Monday of current week
+            current_day_of_week = today.weekday()  # Monday = 0, Sunday = 6
+            monday = today - timedelta(days=current_day_of_week)
+            
+            # Generate dates for Monday through Sunday of current week
+            for i in range(7):
+                day = monday + timedelta(days=i)
+                day_str = day.isoformat()
+                weekly_activity[day_str] = day in activity_dates
+                frozen_days[day_str] = day in frozen_days_set
+            
+            return {
+                'current_streak': current_streak,
+                'longest_streak': longest_streak,
+                'total_days': len(activity_dates),
+                'weekly_activity': weekly_activity,
+                'frozen_days': frozen_days,
+                'has_activity_today': has_activity_today
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting streak data: {e}")
+            return {
+                'current_streak': 0,
+                'longest_streak': 0,
+                'total_days': 0,
+                'weekly_activity': {},
+                'frozen_days': {},
+                'has_activity_today': False,
+                'error': str(e)
+            }
+
+    def freeze_streak(self, user_id: str, access_code: str, freeze_date: str) -> Dict[str, Any]:
+        """Freeze the streak for a specific date (max 1 per week)"""
+        try:
+            from datetime import datetime, timedelta
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            # Get Monday of current week
+            today = datetime.now().date()
+            current_day_of_week = today.weekday()
+            monday = today - timedelta(days=current_day_of_week)
+            sunday = monday + timedelta(days=6)
+            
+            # Check how many freezes used this week
+            cursor.execute('''
+                SELECT COUNT(*) FROM streak_tracking
+                WHERE user_id = ? AND is_freeze = 1
+                AND activity_date >= ? AND activity_date <= ?
+            ''', (user_id, monday.isoformat(), sunday.isoformat()))
+            
+            freeze_count = cursor.fetchone()[0]
+            
+            if freeze_count >= 1:
+                conn.close()
+                return {
+                    'success': False,
+                    'error': 'You have already used your freeze for this week'
+                }
+            
+            # Parse the freeze date
+            freeze_date_obj = datetime.fromisoformat(freeze_date).date()
+            
+            # Check if trying to freeze a future date beyond today
+            if freeze_date_obj > today:
+                conn.close()
+                return {
+                    'success': False,
+                    'error': 'Cannot freeze future dates'
+                }
+            
+            # Check if this date already has activity
+            cursor.execute('''
+                SELECT message_count, is_freeze FROM streak_tracking
+                WHERE user_id = ? AND activity_date = ?
+            ''', (user_id, freeze_date))
+            
+            existing = cursor.fetchone()
+            
+            if existing and existing[0] > 0:
+                conn.close()
+                return {
+                    'success': False,
+                    'error': 'Cannot freeze a day you already have activity on'
+                }
+            
+            if existing and existing[1]:
+                conn.close()
+                return {
+                    'success': False,
+                    'error': 'This day is already frozen'
+                }
+            
+            # Create freeze entry
+            cursor.execute('''
+                INSERT INTO streak_tracking (user_id, access_code, activity_date, message_count, is_freeze)
+                VALUES (?, ?, ?, 0, 1)
+                ON CONFLICT(user_id, activity_date)
+                DO UPDATE SET is_freeze = 1
+            ''', (user_id, access_code, freeze_date))
+            
+            conn.commit()
+            conn.close()
+            
+            return {
+                'success': True,
+                'message': 'Streak frozen successfully!',
+                'freeze_date': freeze_date
+            }
+            
+        except Exception as e:
+            logger.error(f"Error freezing streak: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def get_freeze_status(self, user_id: str) -> Dict[str, Any]:
+        """Get information about user's freeze usage this week"""
+        try:
+            from datetime import datetime, timedelta
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            # Get Monday and Sunday of current week
+            today = datetime.now().date()
+            current_day_of_week = today.weekday()
+            monday = today - timedelta(days=current_day_of_week)
+            sunday = monday + timedelta(days=6)
+            
+            # Count freezes used this week
+            cursor.execute('''
+                SELECT COUNT(*), activity_date FROM streak_tracking
+                WHERE user_id = ? AND is_freeze = 1
+                AND activity_date >= ? AND activity_date <= ?
+                GROUP BY activity_date
+            ''', (user_id, monday.isoformat(), sunday.isoformat()))
+            
+            freeze_records = cursor.fetchall()
+            conn.close()
+            
+            freezes_used = len(freeze_records)
+            freeze_dates = [record[1] for record in freeze_records] if freeze_records else []
+            
+            return {
+                'freezes_available': 1 - freezes_used,
+                'freezes_used': freezes_used,
+                'freeze_dates': freeze_dates,
+                'can_freeze': freezes_used < 1
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting freeze status: {e}")
+            return {
+                'freezes_available': 0,
+                'freezes_used': 0,
+                'freeze_dates': [],
+                'can_freeze': False,
+                'error': str(e)
+            }
 
     def close(self):
         """Close SQLite database connection"""
@@ -2715,6 +3041,279 @@ class PostgreSQLDatabase(DatabaseInterface):
             logger.error(f"Error saving user consent: {e}")
             return False
 
+    def update_streak(self, user_id: str, access_code: str) -> bool:
+        """Update user's streak for today"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            # Get today's date
+            today = datetime.now().date().isoformat()
+            
+            # Use INSERT ON CONFLICT to update if exists
+            cursor.execute('''
+                INSERT INTO streak_tracking (user_id, access_code, activity_date, message_count)
+                VALUES (%s, %s, %s, 1)
+                ON CONFLICT (user_id, activity_date)
+                DO UPDATE SET
+                    message_count = streak_tracking.message_count + 1,
+                    timestamp = CURRENT_TIMESTAMP
+            ''', (user_id, access_code, today))
+            
+            conn.commit()
+            self._return_connection(conn)
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating streak: {e}")
+            return False
+
+    def get_streak_data(self, user_id: str) -> Dict[str, Any]:
+        """Get user's streak information including current streak and weekly activity"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            # Get all activity dates for this user, ordered by date desc
+            cursor.execute('''
+                SELECT activity_date, message_count, is_freeze
+                FROM streak_tracking
+                WHERE user_id = %s
+                ORDER BY activity_date DESC
+            ''', (user_id,))
+            
+            activity_records = cursor.fetchall()
+            self._return_connection(conn)
+            
+            if not activity_records:
+                return {
+                    'current_streak': 0,
+                    'longest_streak': 0,
+                    'total_days': 0,
+                    'weekly_activity': {},
+                    'frozen_days': {},
+                    'has_activity_today': False
+                }
+            
+            # Calculate current streak
+            current_streak = 0
+            today = datetime.now().date()
+            
+            # Parse records: activity_dates for streak calculation, frozen_days for display
+            activity_dates = [record[0] if isinstance(record[0], datetime) else datetime.fromisoformat(str(record[0])).date() for record in activity_records]
+            frozen_days_set = {(record[0] if isinstance(record[0], datetime) else datetime.fromisoformat(str(record[0])).date()) for record in activity_records if record[2]}
+            
+            # Check if they have activity today
+            has_activity_today = today in activity_dates
+            
+            # Calculate current streak
+            # Start from today if they have activity, otherwise start from yesterday if they have activity there
+            # This gives users until end of day to maintain their streak
+            from datetime import timedelta
+            yesterday = today - timedelta(days=1)
+            has_activity_yesterday = yesterday in activity_dates
+            
+            check_date = today
+            if not has_activity_today and has_activity_yesterday:
+                # They haven't posted today yet, but posted yesterday - streak is still alive
+                check_date = yesterday
+            elif not has_activity_today and not has_activity_yesterday:
+                # No activity today or yesterday - streak is broken
+                current_streak = 0
+                check_date = None
+            
+            # Count consecutive days backwards
+            while check_date and check_date in activity_dates:
+                current_streak += 1
+                check_date = check_date - timedelta(days=1)
+            
+            # Calculate longest streak
+            longest_streak = 0
+            temp_streak = 1
+            
+            for i in range(len(activity_dates) - 1):
+                days_diff = (activity_dates[i] - activity_dates[i + 1]).days
+                if days_diff == 1:
+                    temp_streak += 1
+                    longest_streak = max(longest_streak, temp_streak)
+                else:
+                    longest_streak = max(longest_streak, temp_streak)
+                    temp_streak = 1
+            
+            longest_streak = max(longest_streak, temp_streak, current_streak)
+            
+            # Get weekly activity (current week: Monday to Sunday)
+            weekly_activity = {}
+            frozen_days = {}
+            
+            # Find Monday of current week
+            current_day_of_week = today.weekday()  # Monday = 0, Sunday = 6
+            monday = today - timedelta(days=current_day_of_week)
+            
+            # Generate dates for Monday through Sunday of current week
+            for i in range(7):
+                day = monday + timedelta(days=i)
+                day_str = day.isoformat()
+                weekly_activity[day_str] = day in activity_dates
+                frozen_days[day_str] = day in frozen_days_set
+            
+            return {
+                'current_streak': current_streak,
+                'longest_streak': longest_streak,
+                'total_days': len(activity_dates),
+                'weekly_activity': weekly_activity,
+                'frozen_days': frozen_days,
+                'has_activity_today': has_activity_today
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting streak data: {e}")
+            return {
+                'current_streak': 0,
+                'longest_streak': 0,
+                'total_days': 0,
+                'weekly_activity': {},
+                'frozen_days': {},
+                'has_activity_today': False,
+                'error': str(e)
+            }
+
+    def freeze_streak(self, user_id: str, access_code: str, freeze_date: str) -> Dict[str, Any]:
+        """Freeze the streak for a specific date (max 1 per week)"""
+        try:
+            from datetime import datetime, timedelta
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            # Get Monday of current week
+            today = datetime.now().date()
+            current_day_of_week = today.weekday()
+            monday = today - timedelta(days=current_day_of_week)
+            sunday = monday + timedelta(days=6)
+            
+            # Check how many freezes used this week
+            cursor.execute('''
+                SELECT COUNT(*) FROM streak_tracking
+                WHERE user_id = %s AND is_freeze = TRUE
+                AND activity_date >= %s AND activity_date <= %s
+            ''', (user_id, monday.isoformat(), sunday.isoformat()))
+            
+            freeze_count = cursor.fetchone()[0]
+            
+            if freeze_count >= 1:
+                cursor.close()
+                self._return_connection(conn)
+                return {
+                    'success': False,
+                    'error': 'You have already used your freeze for this week'
+                }
+            
+            # Parse the freeze date
+            freeze_date_obj = datetime.fromisoformat(freeze_date).date()
+            
+            # Check if trying to freeze a future date beyond today
+            if freeze_date_obj > today:
+                cursor.close()
+                self._return_connection(conn)
+                return {
+                    'success': False,
+                    'error': 'Cannot freeze future dates'
+                }
+            
+            # Check if this date already has activity
+            cursor.execute('''
+                SELECT message_count, is_freeze FROM streak_tracking
+                WHERE user_id = %s AND activity_date = %s
+            ''', (user_id, freeze_date))
+            
+            existing = cursor.fetchone()
+            
+            if existing and existing[0] > 0:
+                cursor.close()
+                self._return_connection(conn)
+                return {
+                    'success': False,
+                    'error': 'Cannot freeze a day you already have activity on'
+                }
+            
+            if existing and existing[1]:
+                cursor.close()
+                self._return_connection(conn)
+                return {
+                    'success': False,
+                    'error': 'This day is already frozen'
+                }
+            
+            # Create freeze entry
+            cursor.execute('''
+                INSERT INTO streak_tracking (user_id, access_code, activity_date, message_count, is_freeze)
+                VALUES (%s, %s, %s, 0, TRUE)
+                ON CONFLICT (user_id, activity_date)
+                DO UPDATE SET is_freeze = TRUE
+            ''', (user_id, access_code, freeze_date))
+            
+            conn.commit()
+            cursor.close()
+            self._return_connection(conn)
+            
+            return {
+                'success': True,
+                'message': 'Streak frozen successfully!',
+                'freeze_date': freeze_date
+            }
+            
+        except Exception as e:
+            logger.error(f"Error freezing streak: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def get_freeze_status(self, user_id: str) -> Dict[str, Any]:
+        """Get information about user's freeze usage this week"""
+        try:
+            from datetime import datetime, timedelta
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            # Get Monday and Sunday of current week
+            today = datetime.now().date()
+            current_day_of_week = today.weekday()
+            monday = today - timedelta(days=current_day_of_week)
+            sunday = monday + timedelta(days=6)
+            
+            # Count freezes used this week
+            cursor.execute('''
+                SELECT COUNT(*), activity_date FROM streak_tracking
+                WHERE user_id = %s AND is_freeze = TRUE
+                AND activity_date >= %s AND activity_date <= %s
+                GROUP BY activity_date
+            ''', (user_id, monday.isoformat(), sunday.isoformat()))
+            
+            freeze_records = cursor.fetchall()
+            cursor.close()
+            self._return_connection(conn)
+            
+            freezes_used = len(freeze_records)
+            freeze_dates = [str(record[1]) for record in freeze_records] if freeze_records else []
+            
+            return {
+                'freezes_available': 1 - freezes_used,
+                'freezes_used': freezes_used,
+                'freeze_dates': freeze_dates,
+                'can_freeze': freezes_used < 1
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting freeze status: {e}")
+            return {
+                'freezes_available': 0,
+                'freezes_used': 0,
+                'freeze_dates': [],
+                'can_freeze': False,
+                'error': str(e)
+            }
+
     def close(self):
         """Close PostgreSQL database connection pool"""
         try:
@@ -2879,6 +3478,22 @@ class DatabaseManager:
     def save_user_consent(self, user_id: str, access_code: str, consent_accepted: bool) -> bool:
         """Save user's consent decision"""
         return self.database.save_user_consent(user_id, access_code, consent_accepted)
+
+    def update_streak(self, user_id: str, access_code: str) -> bool:
+        """Update user's streak for today"""
+        return self.database.update_streak(user_id, access_code)
+
+    def get_streak_data(self, user_id: str) -> Dict[str, Any]:
+        """Get user's streak information including current streak and weekly activity"""
+        return self.database.get_streak_data(user_id)
+
+    def freeze_streak(self, user_id: str, access_code: str, freeze_date: str) -> Dict[str, Any]:
+        """Freeze the streak for a specific date (max 1 per week)"""
+        return self.database.freeze_streak(user_id, access_code, freeze_date)
+
+    def get_freeze_status(self, user_id: str) -> Dict[str, Any]:
+        """Get information about user's freeze usage this week"""
+        return self.database.get_freeze_status(user_id)
 
     def close(self):
         """Close database connection"""
