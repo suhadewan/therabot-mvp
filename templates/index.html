@@ -451,8 +451,9 @@
             }
 
             .day-circle {
-                width: 35px;
-                height: 35px;
+                width: 40px;
+                height: 40px;
+                font-size: 2rem;
             }
 
             .day-label {
@@ -534,16 +535,28 @@
             }
 
             .day-circle {
-                width: 30px;
-                height: 30px;
-            }
-
-            .day-circle.active::after {
-                font-size: 1rem;
+                width: 32px;
+                height: 32px;
+                font-size: 1.6rem;
             }
 
             .weekly-calendar {
-                gap: 0.25rem;
+                gap: 0.15rem;
+            }
+
+            .calendar-day {
+                flex: 0 0 auto;
+                min-width: 32px;
+            }
+
+            .day-label {
+                font-size: 0.6rem;
+                margin-bottom: 0.3rem;
+            }
+
+            .streak-container {
+                padding: 1.25rem;
+                max-width: 95vw;
             }
         }
 
@@ -686,45 +699,60 @@
         }
 
         .day-circle {
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             margin: 0 auto;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #1e293b;
-            border: 2px solid #334155;
+            background: transparent;
+            border: none;
             position: relative;
-        }
-
-        .day-circle.active {
-            background: #fbbf24;
-            border-color: #f59e0b;
-            box-shadow: 0 0 15px rgba(251, 191, 36, 0.5);
+            font-size: 2.5rem;
+            transition: all 0.3s ease;
         }
 
         .day-circle.active::after {
-            content: '✓';
-            color: #78350f;
-            font-size: 1.2rem;
-            font-weight: bold;
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 80%;
+            background-image: url('/static/hot_chai.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.6));
+            animation: steam 2s ease-in-out infinite;
         }
 
-        .day-circle.frozen {
-            background: #60a5fa;
-            border-color: #3b82f6;
-            box-shadow: 0 0 15px rgba(96, 165, 250, 0.5);
+        @keyframes steam {
+            0%, 100% { transform: translate(-50%, -50%) translateY(0px); }
+            50% { transform: translate(-50%, -50%) translateY(-2px); }
         }
 
         .day-circle.frozen::after {
-            content: '❄️';
-            font-size: 1.2rem;
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 80%;
+            background-image: url('/static/cold_chai.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            filter: drop-shadow(0 0 10px rgba(147, 197, 253, 0.8));
         }
 
         .day-circle.today {
-            border-color: #60a5fa;
-            border-width: 3px;
+            transform: scale(1.15);
+            background: rgba(96, 165, 250, 0.15);
+            border-radius: 50%;
         }
 
         .freeze-button:hover:not(:disabled) {
@@ -742,22 +770,17 @@
             background: #4b5563;
         }
 
-        .day-circle.inactive {
-            background: #0f172a;
-            border-color: #1e293b;
-        }
-
-        .day-circle.missed {
-            background: #1e293b;
-            border-color: #334155;
-            opacity: 0.5;
+        .day-circle.inactive::after {
+            content: '🫖';
+            opacity: 0.3;
+            filter: grayscale(100%);
         }
 
         .day-circle.missed::after {
-            content: '×';
+            content: '✖';
+            opacity: 0.5;
             color: #64748b;
-            font-size: 1.5rem;
-            font-weight: bold;
+            font-size: 1.8rem;
         }
 
         /* Feelings Thermometer Styles */
@@ -891,6 +914,39 @@
 
             .feelings-modal {
                 padding: 1.5rem;
+            }
+        }
+
+        /* Extra small phones */
+        @media (max-width: 380px) {
+            .day-circle {
+                width: 28px;
+                height: 28px;
+                font-size: 1.4rem;
+            }
+
+            .weekly-calendar {
+                gap: 0.1rem;
+            }
+
+            .calendar-day {
+                min-width: 28px;
+            }
+
+            .day-label {
+                font-size: 0.55rem;
+            }
+
+            .streak-container {
+                padding: 1rem;
+            }
+
+            .streak-flame {
+                font-size: 2rem;
+            }
+
+            .streak-count {
+                font-size: 1.5rem;
             }
         }
     </style>
@@ -1267,11 +1323,6 @@
 
                     // Update streak after successful message
                     loadStreakData();
-
-                    // Note: crisis resources box removed because:
-                    // - LLM safety responses already include helpline numbers in the message
-                    // - Showing both creates duplicate information
-                    // - The message itself is comprehensive enough
                 }
             } catch (error) {
                 addMessage('Sorry, something went wrong. Please try again.', 'assistant', 'error');
