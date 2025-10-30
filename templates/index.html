@@ -396,7 +396,7 @@
         .hamburger-button {
             display: none;
             position: fixed;
-            bottom: 80px;
+            bottom: 130px;
             right: 20px;
             background: #d97706;
             color: white;
@@ -407,8 +407,9 @@
             cursor: pointer;
             z-index: 2500;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             transition: all 0.3s ease;
+            line-height: 1;
         }
 
         .hamburger-button:hover {
@@ -444,10 +445,28 @@
                 min-height: 100%;
                 height: calc(100vh - 150px);
                 width: 100%;
+                padding-bottom: 0;
+            }
+
+            .messages {
+                padding-bottom: 90px;
             }
 
             .input-container {
+                position: fixed;
+                bottom: 50px;
+                left: 0;
+                right: 0;
                 border-radius: 0;
+                background: #334155;
+                z-index: 100;
+                margin: 0;
+            }
+
+            .safety-footer {
+                position: fixed;
+                bottom: 0;
+                z-index: 99;
             }
 
             .message-content {
@@ -586,6 +605,13 @@
             .hotlines-sidebar .hotline-section {
                 width: 100%;
                 margin-right: 0;
+            }
+
+            .hamburger-button {
+                width: 50px;
+                height: 50px;
+                font-size: 1.6rem;
+                bottom: 125px;
             }
 
             .streak-container {
@@ -1105,7 +1131,7 @@
 
     <!-- Hamburger button for mobile -->
     <button class="hamburger-button" id="hamburgerButton" onclick="toggleHelplines()">
-        📞
+        ☰
     </button>
 
     <!-- Sidebar overlay for mobile -->
