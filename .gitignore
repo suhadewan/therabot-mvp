@@ -33,3 +33,4 @@ htmlcov/
 *.log
 .env
 *.pdf
+/pilot_study/

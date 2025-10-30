@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, send_from_directory, session, redirect, url_for, Response, stream_with_context
 import os
 import json
 import logging
@@ -199,13 +199,21 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
     Process incoming message using existing chatbot logic.
     Returns response data for the frontend.
     """
-
+    import time
+    start_time = time.time()
+    
+    def log_timing(step_name):
+        elapsed = time.time() - start_time
+        logger.info(f"⏱️ TIMING [{user_id}] {step_name}: {elapsed:.2f}s")
+    
     # Simplified: user_id IS the access_code
     access_code = user_id
 
     # Check if user's access code is still active (not restricted)
     db = get_database()
     code_validation = db.validate_access_code(access_code)
+    log_timing("Access code validation")
+    
     if not code_validation.get('valid'):
         return {
             "type": "error",
@@ -215,10 +223,11 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
         }
 
     # Load recent chat history from database
-    # NOTE: Timezone filtering disabled for testing - re-enable for production
+    # Reduced from 100 to 20 for faster response times
     try:
         db = get_database()
-        chat_history = db.get_chat_history(user_id, limit=100)  # Get recent messages
+        chat_history = db.get_chat_history(user_id, limit=20)  # Get recent messages
+        log_timing("Chat history loaded")
 
         # Load all recent messages (no timezone filtering)
         session_messages = []
@@ -248,13 +257,38 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
     try:
         db = get_database()
         db.save_chat_message(user_id, access_code, "user", message_text)
-        # Update streak when user sends a message
-        db.update_streak(user_id, access_code)
+        log_timing("User message saved")
+        
+        # Only update streak if it hasn't been updated today (smart optimization!)
+        from datetime import datetime
+        today = datetime.now().date().isoformat()
+        
+        # Check if we've already updated the streak today for this user
+        session_key = f"{user_id}_streak_updated"
+        last_streak_update = user_sessions[user_id].get(session_key)
+        
+        if last_streak_update != today:
+            # Update streak in background (non-blocking) - only first message of the day
+            def update_streak_background():
+                try:
+                    db = get_database()
+                    db.update_streak(user_id, access_code)
+                    # Mark as updated today
+                    user_sessions[user_id][session_key] = today
+                    print(f"DEBUG: Streak updated for user {user_id} (first message today)")
+                except Exception as e:
+                    print(f"Error updating streak in background: {e}")
+            
+            streak_thread = threading.Thread(target=update_streak_background, daemon=True)
+            streak_thread.start()
+        else:
+            print(f"DEBUG: Streak already updated today for user {user_id}, skipping")
     except Exception as e:
         print(f"Error saving user message: {e}")
     
     # Check for crisis keywords first (fast, no API calls)
     is_crisis, crisis_response = detect_crisis_keywords(message_text)
+    log_timing("Crisis detection check")
 
     print(f"DEBUG: Crisis detection result: {is_crisis}, response: {crisis_response[:50] if crisis_response else 'None'}...")
 
@@ -362,7 +396,11 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
     
     # Get long-term memory context (summaries from previous sessions)
     mem_manager = get_memory_manager()
+    mem_start = time.time()
     long_term_context = mem_manager.get_long_term_memory(user_id, days=7)
+    mem_time = time.time() - mem_start
+    logger.info(f"🧠 MEMORY QUERY TIME: {mem_time:.2f}s")
+    log_timing("Long-term memory loaded")
     
     # Build system prompt with long-term memory
     system_prompt = load_system_prompt()
@@ -378,26 +416,48 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
     ] + user_sessions[user_id]['messages']
 
     print(f"DEBUG: Sending {len(messages)} messages to OpenAI for user {user_id}")
-    print(f"DEBUG: Last 3 messages being sent:")
-    for i, msg in enumerate(messages[-3:]):
-        role = msg['role']
-        content = msg['content'][:50] + '...' if len(msg['content']) > 50 else msg['content']
-        print(f"  {len(messages) - 3 + i + 1}. {role}: {content}")
+    log_timing("Messages prepared for OpenAI")
     
     try:
-        # Get response from OpenAI
-        completion = openai_client.chat.completions.create(
-            model=config.MODEL_NAME,
-            messages=messages,
-            temperature=config.MODEL_TEMPERATURE,
-            max_tokens=config.MODEL_MAX_TOKENS,
-            stream=False,
-        )
+        # Check if TEST_MODE is enabled (for load testing without OpenAI calls)
+        if config.TEST_MODE:
+            logger.info(f"🧪 TEST MODE: Simulating OpenAI response for user {user_id}")
+            import time
+            time.sleep(config.TEST_RESPONSE_DELAY)  # Simulate API latency
+            
+            # Generate mock response
+            mock_responses = [
+                "Thank you for sharing that with me. How are you feeling about this situation right now?",
+                "I hear you. It sounds like you're going through a challenging time. What support do you have around you?",
+                "That's a valid concern. Have you had a chance to talk to anyone else about this?",
+                "I understand. What do you think would help you feel better in this moment?",
+                "It's okay to feel this way. What has helped you cope with similar feelings in the past?",
+            ]
+            import random
+            full_response = random.choice(mock_responses)
+            log_timing("✅ TEST MODE: Mock response generated")
+        else:
+            # Get response from OpenAI
+            logger.info(f"🚀 Starting OpenAI API call for user {user_id}")
+            completion = openai_client.chat.completions.create(
+                model=config.MODEL_NAME,
+                messages=messages,
+                temperature=config.MODEL_TEMPERATURE,
+                max_tokens=config.MODEL_MAX_TOKENS,
+                stream=False,
+            )
+            log_timing("✅ OpenAI API call completed")
+            
+            full_response = completion.choices[0].message.content
         
-        full_response = completion.choices[0].message.content
-        
-        # Apply guardrails
-        final_response = regenerate_if_needed(full_response, messages, openai_client)
+        # Apply guardrails (set to False to save ~1.4s, you already have crisis detection + moderation)
+        ENABLE_GUARDRAILS = True  # Set to True to enable guardrails check
+        if ENABLE_GUARDRAILS:
+            final_response = regenerate_if_needed(full_response, messages, openai_client)
+            log_timing("Guardrails applied")
+        else:
+            final_response = full_response
+            log_timing("Guardrails skipped (disabled for speed)")
 
         # Save assistant response to database
         try:
@@ -409,29 +469,81 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
                 content=final_response,
                 message_type="normal"
             )
+            log_timing("Assistant response saved to DB")
         except Exception as e:
             print(f"Error saving assistant message: {e}")
 
         # Add assistant response to session
         user_sessions[user_id]['messages'].append({"role": "assistant", "content": final_response})
 
-        # Auto-generate daily summary if user has had sufficient conversation today
-        # This captures the day's conversation for tomorrow's context
-        session_message_count = len(user_sessions[user_id]['messages'])
-        if session_message_count >= 10:  # At least 5 exchanges (10 messages)
+        # Auto-generate daily summary in background (non-blocking)
+        def generate_summary_background():
             try:
-                mem_manager = get_memory_manager()
-                # Only generate once per day
-                if mem_manager.should_generate_summary(user_id, session_message_count):
-                    print(f"DEBUG: Auto-generating daily summary for user {user_id} ({session_message_count} messages today)")
-                    mem_manager.save_daily_summary(
-                        user_id=user_id,
-                        access_code=access_code,
-                        messages=user_sessions[user_id]['messages']
-                    )
+                # Get TODAY's actual message count from database (not session which is capped at 20)
+                from datetime import datetime
+                db = get_database()
+                today = datetime.now().date().isoformat()
+                
+                # Count today's messages from database
+                if hasattr(db.database, '_get_connection'):
+                    conn = db.database._get_connection()
+                    cursor = conn.cursor()
+                    if db.db_type == 'sqlite':
+                        cursor.execute("""
+                            SELECT COUNT(*) FROM chat_messages 
+                            WHERE user_id = ? AND DATE(timestamp) = DATE('now')
+                        """, (user_id,))
+                    else:
+                        cursor.execute("""
+                            SELECT COUNT(*) FROM chat_messages 
+                            WHERE user_id = %s AND DATE(timestamp) = CURRENT_DATE
+                        """, (user_id,))
+                    
+                    todays_message_count = cursor.fetchone()[0]
+                    
+                    if db.db_type != 'sqlite':
+                        db.database._return_connection(conn)
+                    else:
+                        conn.close()
+                else:
+                    todays_message_count = len(user_sessions[user_id]['messages'])
+                
+                logger.info(f"📊 SUMMARY CHECK: User {user_id} has {todays_message_count} messages TODAY")
+                
+                # Check after 10 messages (only generates once per day anyway)
+                if todays_message_count >= 10:
+                    logger.info(f"🎯 SUMMARY MILESTONE: {todays_message_count} messages! Checking if summary needed...")
+                    mem_manager = get_memory_manager()
+                    
+                    # Only generate once per day
+                    should_generate = mem_manager.should_generate_summary(user_id, todays_message_count)
+                    logger.info(f"🔍 SUMMARY should_generate returned: {should_generate}")
+                    
+                    if should_generate:
+                        logger.info(f"✨ Auto-generating daily summary for user {user_id} ({todays_message_count} messages today)")
+                        
+                        # Get ALL of today's messages for the summary
+                        all_todays_messages = db.get_chat_history(user_id, limit=1000)  # Get all today's messages
+                        messages_for_summary = [{"role": msg['role'], "content": msg['content']} for msg in all_todays_messages]
+                        
+                        mem_manager.save_daily_summary(
+                            user_id=user_id,
+                            access_code=access_code,
+                            messages=messages_for_summary
+                        )
+                        logger.info(f"✅ SUMMARY: Summary saved successfully for {user_id}!")
+                    else:
+                        logger.info(f"⏭️  SUMMARY: Summary already exists for today, skipping")
+                else:
+                    logger.info(f"⏳ SUMMARY: Not enough messages yet (need 10, got {todays_message_count})")
             except Exception as e:
-                print(f"Error generating summary: {e}")
-                # Don't fail the request if summary generation fails
+                logger.error(f"❌ Error generating summary in background: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        # Start summary generation in background
+        summary_thread = threading.Thread(target=generate_summary_background, daemon=True)
+        summary_thread.start()
 
         # Run moderation check in background thread (non-blocking)
         # This checks for content policy violations without delaying the response
@@ -443,6 +555,9 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
         )
         background_thread.start()
         print(f"DEBUG: Started background moderation thread for user {user_id}")
+        
+        log_timing("🏁 TOTAL REQUEST TIME")
+        logger.info(f"{'='*60}")
 
         return {
             "type": "normal",
@@ -554,11 +669,10 @@ def get_session(user_id):
     """Get user's chat session - loads recent messages from database"""
     messages = []
 
-    # Load recent messages
-    # NOTE: Timezone filtering disabled for testing - re-enable for production
+    # Load recent messages (reduced for faster loading)
     try:
         db = get_database()
-        chat_history = db.get_chat_history(user_id, limit=100)  # Get recent messages
+        chat_history = db.get_chat_history(user_id, limit=20)  # Get recent messages
 
         # Return all messages (no timezone filtering)
         for msg in chat_history:

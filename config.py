@@ -27,13 +27,13 @@ class Config:
 
     # Response Guardrails
     GUARDRAILS_MAX_WORDS = int(
-        os.getenv("THERABOT_GUARDRAILS_MAX_WORDS", 50)
+        os.getenv("THERABOT_GUARDRAILS_MAX_WORDS", 100)  # Relaxed from 50 to 100
     )
     GUARDRAILS_MAX_SENTENCES = int(
-        os.getenv("THERABOT_GUARDRAILS_MAX_SENTENCES", 3)
+        os.getenv("THERABOT_GUARDRAILS_MAX_SENTENCES", 6)  # Relaxed from 3 to 6
     )
     GUARDRAILS_REQUIRE_QUESTION = (
-        os.getenv("THERABOT_GUARDRAILS_REQUIRE_QUESTION", "true").lower() == "true"
+        os.getenv("THERABOT_GUARDRAILS_REQUIRE_QUESTION", "false").lower() == "true"  # Made optional
     )
     GUARDRAILS_MAX_RETRIES = int(
         os.getenv("THERABOT_GUARDRAILS_MAX_RETRIES", 3)
@@ -43,6 +43,14 @@ class Config:
     )
     GUARDRAILS_TEMPERATURE_DECREMENT = float(
         os.getenv("THERABOT_GUARDRAILS_TEMPERATURE_DECREMENT", 0.2)
+    )
+
+    # Testing Configuration
+    TEST_MODE = (
+        os.getenv("THERABOT_TEST_MODE", "false").lower() == "true"
+    )
+    TEST_RESPONSE_DELAY = float(
+        os.getenv("THERABOT_TEST_RESPONSE_DELAY", 0.5)  # Simulate API latency in seconds
     )
 
     # UI Configuration
