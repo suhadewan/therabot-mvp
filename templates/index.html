@@ -395,26 +395,28 @@
         /* Hamburger Menu Button for Mobile */
         .hamburger-button {
             display: none;
-            position: fixed;
-            bottom: 130px;
-            right: 20px;
-            background: #d97706;
+            position: absolute;
+            top: 4rem;
+            right: 1rem;
+            background: rgba(217, 119, 6, 0.9);
             color: white;
-            border: none;
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
+            border: 1px solid #fbbf24;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
             cursor: pointer;
-            z-index: 2500;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-            font-size: 1.8rem;
-            transition: all 0.3s ease;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            font-size: 1.5rem;
+            transition: all 0.2s ease;
             line-height: 1;
+            backdrop-filter: blur(10px);
         }
 
         .hamburger-button:hover {
-            background: #b45309;
-            transform: scale(1.05);
+            background: rgba(180, 83, 9, 0.95);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
         }
 
         .sidebar-overlay {
@@ -534,6 +536,11 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                top: 1rem;
+                right: 1rem;
+                width: 36px;
+                height: 36px;
+                font-size: 1.3rem;
             }
 
             .streak-container {
@@ -608,10 +615,15 @@
             }
 
             .hamburger-button {
-                width: 50px;
-                height: 50px;
-                font-size: 1.6rem;
-                bottom: 125px;
+                width: 32px;
+                height: 32px;
+                font-size: 1.2rem;
+                top: 0.75rem;
+                right: 0.75rem;
+            }
+
+            .logout-button {
+                top: 2.75rem;
             }
 
             .streak-container {
@@ -1063,6 +1075,7 @@
             </h1>
             <p>Your mental health companion and guide</p>
             <button class="logout-button" onclick="logout()">Logout</button>
+            <button class="hamburger-button" id="hamburgerButton" onclick="toggleHelplines()">☰</button>
         </div>
 
     <div class="main-content">
@@ -1128,11 +1141,6 @@
             
         </div>
     </div>
-
-    <!-- Hamburger button for mobile -->
-    <button class="hamburger-button" id="hamburgerButton" onclick="toggleHelplines()">
-        ☰
-    </button>
 
     <!-- Sidebar overlay for mobile -->
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleHelplines()"></div>
