@@ -260,8 +260,7 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
         log_timing("User message saved")
         
         # Only update streak if it hasn't been updated today (smart optimization!)
-        from datetime import datetime
-        today = datetime.now().date().isoformat()
+        today = get_india_today()
         
         # Check if we've already updated the streak today for this user
         session_key = f"{user_id}_streak_updated"
@@ -480,9 +479,8 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
         def generate_summary_background():
             try:
                 # Get TODAY's actual message count from database (not session which is capped at 20)
-                from datetime import datetime
                 db = get_database()
-                today = datetime.now().date().isoformat()
+                today = get_india_today()
                 
                 # Count today's messages from database
                 if hasattr(db.database, '_get_connection'):
