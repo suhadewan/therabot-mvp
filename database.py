@@ -5,10 +5,22 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional
 from abc import ABC, abstractmethod
 import logging
+import pytz
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Timezone configuration - India Standard Time (IST)
+INDIA_TZ = pytz.timezone('Asia/Kolkata')
+
+def get_india_now():
+    """Get current datetime in India timezone"""
+    return datetime.now(INDIA_TZ)
+
+def get_india_today():
+    """Get today's date in India timezone"""
+    return get_india_now().date()
 
 class DatabaseInterface(ABC):
     """Abstract base class for database operations"""
@@ -1370,8 +1382,8 @@ class SQLiteDatabase(DatabaseInterface):
             conn = self._get_connection()
             cursor = conn.cursor()
             
-            # Get today's date
-            today = datetime.now().date().isoformat()
+            # Get today's date in India timezone
+            today = get_india_today().isoformat()
             
             # Check if entry exists for today
             cursor.execute('''
@@ -1433,7 +1445,7 @@ class SQLiteDatabase(DatabaseInterface):
             
             # Calculate current streak
             current_streak = 0
-            today = datetime.now().date()
+            today = get_india_today()
             from datetime import timedelta
             check_date = today
             
@@ -1522,8 +1534,8 @@ class SQLiteDatabase(DatabaseInterface):
             conn = self._get_connection()
             cursor = conn.cursor()
             
-            # Get Monday of current week
-            today = datetime.now().date()
+            # Get Monday of current week (in India timezone)
+            today = get_india_today()
             current_day_of_week = today.weekday()
             monday = today - timedelta(days=current_day_of_week)
             sunday = monday + timedelta(days=6)
@@ -1608,8 +1620,8 @@ class SQLiteDatabase(DatabaseInterface):
             conn = self._get_connection()
             cursor = conn.cursor()
             
-            # Get Monday and Sunday of current week
-            today = datetime.now().date()
+            # Get Monday and Sunday of current week (in India timezone)
+            today = get_india_today()
             current_day_of_week = today.weekday()
             monday = today - timedelta(days=current_day_of_week)
             sunday = monday + timedelta(days=6)
@@ -1705,7 +1717,7 @@ class PostgreSQLDatabase(DatabaseInterface):
             conn = self.psycopg2.connect(
                 self.connection_string,
                 connect_timeout=5,  # 5 second connect timeout (Supabase recommendation)
-                options='-c statement_timeout=10000'  # 10 second query timeout
+                options='-c statement_timeout=10000 -c timezone=Asia/Kolkata'  # Set timezone to IST
             )
             # Autocommit=False for explicit transaction control
             conn.autocommit = False
@@ -3047,8 +3059,8 @@ class PostgreSQLDatabase(DatabaseInterface):
             conn = self._get_connection()
             cursor = conn.cursor()
             
-            # Get today's date
-            today = datetime.now().date().isoformat()
+            # Get today's date in India timezone
+            today = get_india_today().isoformat()
             
             # Use INSERT ON CONFLICT to update if exists
             cursor.execute('''
@@ -3097,7 +3109,7 @@ class PostgreSQLDatabase(DatabaseInterface):
             
             # Calculate current streak
             current_streak = 0
-            today = datetime.now().date()
+            today = get_india_today()
             
             # Parse records: activity_dates for streak calculation, frozen_days for display
             activity_dates = [record[0] if isinstance(record[0], datetime) else datetime.fromisoformat(str(record[0])).date() for record in activity_records]
@@ -3185,8 +3197,8 @@ class PostgreSQLDatabase(DatabaseInterface):
             conn = self._get_connection()
             cursor = conn.cursor()
             
-            # Get Monday of current week
-            today = datetime.now().date()
+            # Get Monday of current week (in India timezone)
+            today = get_india_today()
             current_day_of_week = today.weekday()
             monday = today - timedelta(days=current_day_of_week)
             sunday = monday + timedelta(days=6)
@@ -3276,8 +3288,8 @@ class PostgreSQLDatabase(DatabaseInterface):
             conn = self._get_connection()
             cursor = conn.cursor()
             
-            # Get Monday and Sunday of current week
-            today = datetime.now().date()
+            # Get Monday and Sunday of current week (in India timezone)
+            today = get_india_today()
             current_day_of_week = today.weekday()
             monday = today - timedelta(days=current_day_of_week)
             sunday = monday + timedelta(days=6)
