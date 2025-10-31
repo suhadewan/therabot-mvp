@@ -1421,7 +1421,7 @@ class SQLiteDatabase(DatabaseInterface):
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
-            
+
             # Get all activity dates for this user, ordered by date desc
             cursor.execute('''
                 SELECT activity_date, message_count, is_freeze
@@ -1429,10 +1429,10 @@ class SQLiteDatabase(DatabaseInterface):
                 WHERE user_id = ?
                 ORDER BY activity_date DESC
             ''', (user_id,))
-            
+
             activity_records = cursor.fetchall()
             conn.close()
-            
+
             if not activity_records:
                 return {
                     'current_streak': 0,
@@ -1442,15 +1442,17 @@ class SQLiteDatabase(DatabaseInterface):
                     'frozen_days': {},
                     'has_activity_today': False
                 }
-            
+
             # Calculate current streak
             current_streak = 0
             today = get_india_today()
             from datetime import timedelta
             check_date = today
-            
-            # Parse records: activity_dates for streak calculation, frozen_days for display
-            activity_dates = [datetime.fromisoformat(record[0]).date() for record in activity_records]
+
+            # Parse records: only count days with 5+ messages OR frozen days
+            # activity_dates = days that count toward streak (5+ messages or frozen)
+            activity_dates = [datetime.fromisoformat(record[0]).date() for record in activity_records
+                            if record[1] >= 5 or record[2]]  # message_count >= 5 OR is_freeze
             frozen_days_set = {datetime.fromisoformat(record[0]).date() for record in activity_records if record[2]}
             
             # Check if they have activity today or yesterday (for streak continuation)
@@ -3110,9 +3112,11 @@ class PostgreSQLDatabase(DatabaseInterface):
             # Calculate current streak
             current_streak = 0
             today = get_india_today()
-            
-            # Parse records: activity_dates for streak calculation, frozen_days for display
-            activity_dates = [record[0] if isinstance(record[0], datetime) else datetime.fromisoformat(str(record[0])).date() for record in activity_records]
+
+            # Parse records: only count days with 5+ messages OR frozen days
+            # activity_dates = days that count toward streak (5+ messages or frozen)
+            activity_dates = [record[0] if isinstance(record[0], datetime) else datetime.fromisoformat(str(record[0])).date()
+                            for record in activity_records if record[1] >= 5 or record[2]]  # message_count >= 5 OR is_freeze
             frozen_days_set = {(record[0] if isinstance(record[0], datetime) else datetime.fromisoformat(str(record[0])).date()) for record in activity_records if record[2]}
             
             # Check if they have activity today
