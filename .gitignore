@@ -34,3 +34,5 @@ htmlcov/
 .env
 *.pdf
 /pilot_study/
+/backup_*
+/cleanup/
