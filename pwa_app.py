@@ -997,27 +997,28 @@ def save_consent():
 
         db = get_database()
 
+        # ALWAYS save consent decision (accept OR decline) for analytics
+        success = db.save_user_consent(user_id, access_code, consent_accepted)
+
+        if not success:
+            return jsonify({"error": "Failed to save consent"}), 500
+
         if consent_accepted:
-            # User consented - save consent
-            success = db.save_user_consent(user_id, access_code, consent_accepted)
+            # User ACCEPTED - grant access
+            logger.info(f"User ACCEPTED consent for access code: {access_code}, user_id: {user_id}")
 
-            if success:
-                # Set session for future requests
-                session['user_id'] = user_id
-                session['access_code'] = access_code
-                session['login_id'] = user_id
-                return jsonify({"success": True, "consent_accepted": True})
-            else:
-                return jsonify({"error": "Failed to save consent"}), 500
+            # Set session for future requests
+            session['user_id'] = user_id
+            session['access_code'] = access_code
+            session['login_id'] = user_id
+
+            return jsonify({"success": True, "consent_accepted": True})
         else:
-            # User declined - just log them out (don't deactivate access code)
+            # User DECLINED - save decision but log them out
             # They can log in again with the same code and see the consent form again
-            logger.info(f"User declined consent for access code: {access_code}, user_id: {user_id}")
+            logger.info(f"User DECLINED consent for access code: {access_code}, user_id: {user_id}")
 
-            # DO NOT save the decline decision - let them try again
-            # DO NOT deactivate the access code - they can use it again
-
-            # Just clear their session
+            # Clear their session (no access without consent)
             session.clear()
 
             return jsonify({
