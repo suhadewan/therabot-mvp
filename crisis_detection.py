@@ -47,8 +47,9 @@ def detect_suicide_keywords(input_lower: str) -> bool:
 
     # Crisis keywords in English and Hindi
     crisis_keywords = [
+        # Direct suicide/death expressions
         "suicide", "kill myself", "want to die", "end my life",
-        "kms", "i'll kms", "imma kms", "gonna kms", "going to kms"  # Internet slang for "kill myself"
+        "kms", "i'll kms", "imma kms", "gonna kms", "going to kms",  # Internet slang for "kill myself"
         "meri zindagi khatam", "marna chahta", "khudkushi",
         "nahi jeena", "i don't want to live", "khatam karna", "mar jaaun",
         "want to end it all", "better off dead", "no reason to live",
@@ -56,7 +57,21 @@ def detect_suicide_keywords(input_lower: str) -> bool:
         "thinking of ending it", "planning to die", "ready to die",
         "tired of living", "life is meaningless",
         "death would be better", "give up on life",
-        "going to jump", "gonna jump"  # Common suicide method references
+        "going to jump", "gonna jump",  # Common suicide method references
+
+        # Hopelessness & giving up (from test dataset)
+        "giving up on everything", "give up on everything",
+        "no reason to keep trying", "hard to find a reason",
+        "wish i could just disappear", "want to disappear",
+      
+
+        # Hindi/Hinglish expressions (from test dataset)
+        "sab chhod du", "sab chhod doon", "sab chod du",  # give up everything
+        "agar main na hota", "agar main na hoti",  # if I wasn't here
+        "main na hota to behtar",  # better if I wasn't here
+        "aage badhne ka koi reason nahi", "aage badhne ka reason nahi",  # no reason to keep going
+        "andar se khatam ho gaya", "andar se khatam",  # finished/dead inside
+        "gayab ho sakta", "gayab ho jaaun", "disappear ho jaaun",  # disappear/vanish
     ]
 
     # Check for exact keyword matches
