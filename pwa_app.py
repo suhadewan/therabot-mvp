@@ -743,42 +743,14 @@ def track_email_open(tracking_id):
         ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
         user_agent = request.headers.get('User-Agent', '')
 
-        # Save tracking event to database
+        # Track email open using database method
         db = get_database()
+        success = db.track_email_open(tracking_id, ip_address, user_agent)
 
-        # Use raw SQL to insert/update tracking data
-        if db.db_type == 'postgresql':
-            conn = db._get_connection()
-            cursor = conn.cursor()
-
-            # Check if tracking_id already exists
-            cursor.execute("""
-                SELECT opened_count FROM email_tracking
-                WHERE tracking_id = %s
-            """, (tracking_id,))
-
-            result = cursor.fetchone()
-
-            if result:
-                # Update existing record (increment count)
-                cursor.execute("""
-                    UPDATE email_tracking
-                    SET opened_count = opened_count + 1,
-                        opened_at = CURRENT_TIMESTAMP,
-                        ip_address = %s,
-                        user_agent = %s
-                    WHERE tracking_id = %s
-                """, (ip_address, user_agent, tracking_id))
-            else:
-                # First open - but we need more info from the tracking_id
-                # For now, just log a warning that tracking_id wasn't found
-                logger.warning(f"Tracking ID {tracking_id} not found in database")
-
-            conn.commit()
-            cursor.close()
-            db._return_connection(conn)
-
-        logger.info(f"Email opened: {tracking_id} from {ip_address}")
+        if success:
+            logger.info(f"Email opened: {tracking_id} from {ip_address}")
+        else:
+            logger.warning(f"Failed to track email open: {tracking_id}")
 
     except Exception as e:
         logger.error(f"Error tracking email open: {e}")
@@ -799,29 +771,14 @@ def track_email_click(tracking_id):
         ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
         user_agent = request.headers.get('User-Agent', '')
 
-        # Save click event to database
+        # Track email click using database method
         db = get_database()
+        success = db.track_email_click(tracking_id, ip_address, user_agent)
 
-        # Use raw SQL to update tracking data
-        if db.db_type == 'postgresql':
-            conn = db._get_connection()
-            cursor = conn.cursor()
-
-            # Update existing record with click info
-            cursor.execute("""
-                UPDATE email_tracking
-                SET click_count = COALESCE(click_count, 0) + 1,
-                    clicked_at = CURRENT_TIMESTAMP,
-                    click_ip_address = %s,
-                    click_user_agent = %s
-                WHERE tracking_id = %s
-            """, (ip_address, user_agent, tracking_id))
-
-            conn.commit()
-            cursor.close()
-            db._return_connection(conn)
-
-        logger.info(f"Email link clicked: {tracking_id} from {ip_address}")
+        if success:
+            logger.info(f"Email link clicked: {tracking_id} from {ip_address}")
+        else:
+            logger.warning(f"Failed to track email click: {tracking_id}")
 
     except Exception as e:
         logger.error(f"Error tracking email click: {e}")

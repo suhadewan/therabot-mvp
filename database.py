@@ -207,6 +207,16 @@ class DatabaseInterface(ABC):
         """Get information about user's freeze usage this week"""
         pass
 
+    @abstractmethod
+    def track_email_open(self, tracking_id: str, ip_address: str, user_agent: str) -> bool:
+        """Track email open event"""
+        pass
+
+    @abstractmethod
+    def track_email_click(self, tracking_id: str, ip_address: str, user_agent: str) -> bool:
+        """Track email link click event"""
+        pass
+
 class SQLiteDatabase(DatabaseInterface):
     """SQLite implementation of the database interface"""
     
@@ -1658,6 +1668,16 @@ class SQLiteDatabase(DatabaseInterface):
                 'can_freeze': False,
                 'error': str(e)
             }
+
+    def track_email_open(self, tracking_id: str, ip_address: str, user_agent: str) -> bool:
+        """Track email open event - SQLite stub"""
+        logger.warning("Email tracking not implemented for SQLite")
+        return False
+
+    def track_email_click(self, tracking_id: str, ip_address: str, user_agent: str) -> bool:
+        """Track email link click event - SQLite stub"""
+        logger.warning("Email tracking not implemented for SQLite")
+        return False
 
     def close(self):
         """Close SQLite database connection"""
@@ -3353,6 +3373,60 @@ class PostgreSQLDatabase(DatabaseInterface):
                 'error': str(e)
             }
 
+    def track_email_open(self, tracking_id: str, ip_address: str, user_agent: str) -> bool:
+        """Track email open event"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Check if tracking_id exists and update
+            cursor.execute("""
+                UPDATE email_tracking
+                SET opened_count = opened_count + 1,
+                    opened_at = CURRENT_TIMESTAMP,
+                    ip_address = %s,
+                    user_agent = %s
+                WHERE tracking_id = %s
+            """, (ip_address, user_agent, tracking_id))
+
+            rows_affected = cursor.rowcount
+            conn.commit()
+            cursor.close()
+            self._return_connection(conn)
+
+            return rows_affected > 0
+
+        except Exception as e:
+            logger.error(f"Error tracking email open: {e}")
+            return False
+
+    def track_email_click(self, tracking_id: str, ip_address: str, user_agent: str) -> bool:
+        """Track email link click event"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Update click tracking
+            cursor.execute("""
+                UPDATE email_tracking
+                SET click_count = COALESCE(click_count, 0) + 1,
+                    clicked_at = CURRENT_TIMESTAMP,
+                    click_ip_address = %s,
+                    click_user_agent = %s
+                WHERE tracking_id = %s
+            """, (ip_address, user_agent, tracking_id))
+
+            rows_affected = cursor.rowcount
+            conn.commit()
+            cursor.close()
+            self._return_connection(conn)
+
+            return rows_affected > 0
+
+        except Exception as e:
+            logger.error(f"Error tracking email click: {e}")
+            return False
+
     def close(self):
         """Close PostgreSQL database connection pool"""
         try:
@@ -3533,6 +3607,14 @@ class DatabaseManager:
     def get_freeze_status(self, user_id: str) -> Dict[str, Any]:
         """Get information about user's freeze usage this week"""
         return self.database.get_freeze_status(user_id)
+
+    def track_email_open(self, tracking_id: str, ip_address: str, user_agent: str) -> bool:
+        """Track email open event"""
+        return self.database.track_email_open(tracking_id, ip_address, user_agent)
+
+    def track_email_click(self, tracking_id: str, ip_address: str, user_agent: str) -> bool:
+        """Track email link click event"""
+        return self.database.track_email_click(tracking_id, ip_address, user_agent)
 
     def close(self):
         """Close database connection"""
