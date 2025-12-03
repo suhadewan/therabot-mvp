@@ -1903,6 +1903,26 @@ class PostgreSQLDatabase(DatabaseInterface):
                 )
             ''')
 
+            # Email tracking table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS email_tracking (
+                    id SERIAL PRIMARY KEY,
+                    tracking_id TEXT UNIQUE NOT NULL,
+                    email TEXT NOT NULL,
+                    access_code TEXT,
+                    campaign TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    opened_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    ip_address TEXT,
+                    user_agent TEXT,
+                    opened_count INTEGER DEFAULT 1,
+                    clicked_at TIMESTAMP,
+                    click_ip_address TEXT,
+                    click_user_agent TEXT,
+                    click_count INTEGER DEFAULT 0
+                )
+            ''')
+
             # Create indexes
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_messages_timestamp ON chat_messages(timestamp)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON chat_messages(user_id)')
@@ -1910,6 +1930,9 @@ class PostgreSQLDatabase(DatabaseInterface):
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_flagged_chats_timestamp ON flagged_chats(timestamp)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_flagged_chats_flag_type ON flagged_chats(flag_type)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_feelings_tracking_date ON feelings_tracking(date)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_email_tracking_tracking_id ON email_tracking(tracking_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_email_tracking_email ON email_tracking(email)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_email_tracking_campaign ON email_tracking(campaign)')
 
             conn.commit()
             cursor.close()
