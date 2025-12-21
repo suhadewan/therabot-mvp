@@ -208,6 +208,16 @@ class DatabaseInterface(ABC):
         pass
 
     @abstractmethod
+    def get_users_list(self) -> List[Dict[str, Any]]:
+        """Get list of all users with their message counts and activity"""
+        pass
+
+    @abstractmethod
+    def get_user_chats(self, access_code: str) -> List[Dict[str, Any]]:
+        """Get all chat messages for a specific user/access code"""
+        pass
+
+    @abstractmethod
     def track_email_open(self, tracking_id: str, ip_address: str, user_agent: str) -> bool:
         """Track email open event"""
         pass
@@ -1678,6 +1688,82 @@ class SQLiteDatabase(DatabaseInterface):
         """Track email link click event - SQLite stub"""
         logger.warning("Email tracking not implemented for SQLite")
         return False
+
+    def get_users_list(self) -> List[Dict[str, Any]]:
+        """Get list of all users with their message counts and activity from SQLite"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Get all unique users (access codes) with their message counts and last activity
+            cursor.execute('''
+                SELECT 
+                    cm.access_code,
+                    ac.user_type,
+                    ac.school_id,
+                    COUNT(cm.id) as message_count,
+                    MAX(cm.timestamp) as last_activity,
+                    MIN(cm.timestamp) as first_activity
+                FROM chat_messages cm
+                LEFT JOIN access_codes ac ON cm.access_code = ac.code
+                GROUP BY cm.access_code
+                ORDER BY MAX(cm.timestamp) DESC
+            ''')
+
+            rows = cursor.fetchall()
+            users = []
+            for row in rows:
+                users.append({
+                    'access_code': row[0],
+                    'user_type': row[1] or 'Unknown',
+                    'school_id': row[2] or 'N/A',
+                    'message_count': row[3],
+                    'last_activity': row[4],
+                    'first_activity': row[5]
+                })
+
+            conn.close()
+            return users
+
+        except Exception as e:
+            logger.error(f"Error getting users list from SQLite: {e}")
+            return []
+
+    def get_user_chats(self, access_code: str) -> List[Dict[str, Any]]:
+        """Get all chat messages for a specific user/access code from SQLite"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Get all messages for this user, ordered chronologically
+            cursor.execute('''
+                SELECT 
+                    id, user_id, access_code, role, content, 
+                    message_type, timestamp
+                FROM chat_messages
+                WHERE access_code = ?
+                ORDER BY timestamp ASC
+            ''', (access_code,))
+
+            rows = cursor.fetchall()
+            messages = []
+            for row in rows:
+                messages.append({
+                    'id': row[0],
+                    'user_id': row[1],
+                    'access_code': row[2],
+                    'role': row[3],
+                    'content': row[4],
+                    'message_type': row[5],
+                    'timestamp': row[6]
+                })
+
+            conn.close()
+            return messages
+
+        except Exception as e:
+            logger.error(f"Error getting user chats from SQLite: {e}")
+            return []
 
     def close(self):
         """Close SQLite database connection"""
@@ -3427,6 +3513,88 @@ class PostgreSQLDatabase(DatabaseInterface):
             logger.error(f"Error tracking email click: {e}")
             return False
 
+    def get_users_list(self) -> List[Dict[str, Any]]:
+        """Get list of all users with their message counts and activity from PostgreSQL"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Get all unique users (access codes) with their message counts and last activity
+            cursor.execute('''
+                SELECT 
+                    cm.access_code,
+                    ac.user_type,
+                    ac.school_id,
+                    COUNT(cm.id) as message_count,
+                    MAX(cm.timestamp) as last_activity,
+                    MIN(cm.timestamp) as first_activity
+                FROM chat_messages cm
+                LEFT JOIN access_codes ac ON cm.access_code = ac.code
+                GROUP BY cm.access_code, ac.user_type, ac.school_id
+                ORDER BY MAX(cm.timestamp) DESC
+            ''')
+
+            rows = cursor.fetchall()
+            users = []
+            for row in rows:
+                users.append({
+                    'access_code': row[0],
+                    'user_type': row[1] or 'Unknown',
+                    'school_id': row[2] or 'N/A',
+                    'message_count': row[3],
+                    'last_activity': str(row[4]) if row[4] else None,
+                    'first_activity': str(row[5]) if row[5] else None
+                })
+
+            cursor.close()
+            self._return_connection(conn)
+            return users
+
+        except Exception as e:
+            logger.error(f"Error getting users list from PostgreSQL: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+
+    def get_user_chats(self, access_code: str) -> List[Dict[str, Any]]:
+        """Get all chat messages for a specific user/access code from PostgreSQL"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Get all messages for this user, ordered chronologically
+            cursor.execute('''
+                SELECT 
+                    id, user_id, access_code, role, content, 
+                    message_type, timestamp
+                FROM chat_messages
+                WHERE access_code = %s
+                ORDER BY timestamp ASC
+            ''', (access_code,))
+
+            rows = cursor.fetchall()
+            messages = []
+            for row in rows:
+                messages.append({
+                    'id': row[0],
+                    'user_id': row[1],
+                    'access_code': row[2],
+                    'role': row[3],
+                    'content': row[4],
+                    'message_type': row[5],
+                    'timestamp': str(row[6]) if row[6] else None
+                })
+
+            cursor.close()
+            self._return_connection(conn)
+            return messages
+
+        except Exception as e:
+            logger.error(f"Error getting user chats from PostgreSQL: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+
     def close(self):
         """Close PostgreSQL database connection pool"""
         try:
@@ -3615,6 +3783,14 @@ class DatabaseManager:
     def track_email_click(self, tracking_id: str, ip_address: str, user_agent: str) -> bool:
         """Track email link click event"""
         return self.database.track_email_click(tracking_id, ip_address, user_agent)
+
+    def get_users_list(self) -> List[Dict[str, Any]]:
+        """Get list of all users with their message counts and activity"""
+        return self.database.get_users_list()
+
+    def get_user_chats(self, access_code: str) -> List[Dict[str, Any]]:
+        """Get all chat messages for a specific user/access code"""
+        return self.database.get_user_chats(access_code)
 
     def close(self):
         """Close database connection"""

@@ -1480,6 +1480,39 @@ def admin_feelings():
         print(f"Error getting feelings data: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
+@app.route('/admin/users')
+def admin_get_users():
+    """Admin endpoint to get list of users with message counts"""
+    try:
+        db = get_database()
+        users = db.get_users_list()
+        return jsonify({"users": users})
+
+    except Exception as e:
+        logger.error(f"Error getting users list: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/admin/user-chats/<access_code>')
+def admin_get_user_chats(access_code):
+    """Admin endpoint to get all chat messages for a specific user"""
+    try:
+        db = get_database()
+        messages = db.get_user_chats(access_code)
+        
+        return jsonify({
+            "access_code": access_code,
+            "message_count": len(messages),
+            "messages": messages
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting user chats: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error"}), 500
+
 if __name__ == '__main__':
     # Database is already initialized at module load time
     print("Starting MindMitra PWA...")

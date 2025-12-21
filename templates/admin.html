@@ -463,6 +463,111 @@
             padding: 0.4rem 0.8rem;
             font-size: 0.85rem;
         }
+
+        .user-item {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f3f4f6;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-item:hover {
+            background: #f9fafb;
+        }
+
+        .user-item:last-child {
+            border-bottom: none;
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .user-code {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #374151;
+            margin-bottom: 0.25rem;
+        }
+
+        .user-details {
+            color: #6b7280;
+            font-size: 0.85rem;
+        }
+
+        .message-item {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .message-item:last-child {
+            border-bottom: none;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .message-role {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .message-role.user {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .message-role.assistant {
+            background: #f0fdf4;
+            color: #15803d;
+        }
+
+        .message-timestamp {
+            color: #6b7280;
+            font-size: 0.85rem;
+        }
+
+        .message-content {
+            background: #f8fafc;
+            padding: 0.75rem;
+            border-radius: 8px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .message-type-badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-left: 0.5rem;
+        }
+
+        .message-type-badge.crisis {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .message-type-badge.safety {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .message-type-badge.normal {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
     </style>
 </head>
 <body>
@@ -482,6 +587,7 @@
 
         <div class="tabs">
             <button class="tab active" onclick="showTab('flagged-chats')">🚨 Flagged Chats</button>
+            <button class="tab" onclick="showTab('user-chats')">💬 User Chats</button>
             <button class="tab" onclick="showTab('access-codes')">🔑 Access Codes</button>
         </div>
 
@@ -498,6 +604,39 @@
                     <button onclick="previousPage()" id="prevBtn">Previous</button>
                     <span class="current-page" id="currentPage">Page 1</span>
                     <button onclick="nextPage()" id="nextBtn">Next</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Chats Tab -->
+        <div id="user-chats" class="tab-content">
+            <div class="flagged-chats">
+                <div class="section-header">
+                    <h2>💬 User Chats by Access Code</h2>
+                    <p style="margin-top: 0.5rem; color: #6b7280; font-size: 0.9rem;">
+                        Select a user to view their complete conversation history
+                    </p>
+                </div>
+                <div class="chat-list" id="usersList">
+                    <div class="loading">Loading users...</div>
+                </div>
+            </div>
+            
+            <!-- Selected User's Chat History -->
+            <div id="selectedUserChats" style="display: none; margin-top: 2rem;">
+                <div class="flagged-chats">
+                    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h2 id="selectedUserTitle">User Chats</h2>
+                            <p id="selectedUserInfo" style="margin-top: 0.5rem; color: #6b7280; font-size: 0.9rem;"></p>
+                        </div>
+                        <button onclick="clearSelectedUser()" class="btn btn-small" style="background: #e5e7eb; color: #374151;">
+                            Back to Users List
+                        </button>
+                    </div>
+                    <div class="chat-list" id="userChatMessages" style="max-height: 800px;">
+                        <div class="loading">Loading messages...</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -700,6 +839,7 @@
             loadStats();
             loadFlaggedChats();
             loadAccessCodes();
+            loadUsersList();
         });
 
         // Refresh data every 30 seconds
@@ -906,6 +1046,95 @@
                 closeEditModal();
             }
         });
+
+        // User Chats Tab Functions
+        async function loadUsersList() {
+            try {
+                const response = await fetch('/admin/users');
+                const data = await response.json();
+                
+                const usersList = document.getElementById('usersList');
+                
+                if (data.users && data.users.length > 0) {
+                    usersList.innerHTML = data.users.map(user => `
+                        <div class="user-item" onclick="loadUserChats('${user.access_code}')">
+                            <div class="user-info">
+                                <div class="user-code">${user.access_code}</div>
+                                <div class="user-details">
+                                    Type: ${user.user_type} | School: ${user.school_id} | 
+                                    Messages: ${user.message_count} | 
+                                    Last Active: ${new Date(user.last_activity).toLocaleString()}
+                                </div>
+                            </div>
+                            <div>
+                                <button class="btn btn-primary btn-small" onclick="event.stopPropagation(); loadUserChats('${user.access_code}')">
+                                    View Chats
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    usersList.innerHTML = '<div class="loading">No users found</div>';
+                }
+            } catch (error) {
+                document.getElementById('usersList').innerHTML = `
+                    <div class="error">Error loading users: ${error.message}</div>
+                `;
+            }
+        }
+
+        async function loadUserChats(accessCode) {
+            try {
+                // Show the selected user chats section
+                document.getElementById('selectedUserChats').style.display = 'block';
+                document.getElementById('userChatMessages').innerHTML = '<div class="loading">Loading messages...</div>';
+                
+                // Scroll to the chat history
+                document.getElementById('selectedUserChats').scrollIntoView({ behavior: 'smooth' });
+                
+                const response = await fetch(`/admin/user-chats/${accessCode}`);
+                const data = await response.json();
+                
+                // Update header
+                document.getElementById('selectedUserTitle').textContent = `Chats for ${accessCode}`;
+                document.getElementById('selectedUserInfo').textContent = 
+                    `Total messages: ${data.message_count} | Viewing complete conversation history`;
+                
+                const chatMessages = document.getElementById('userChatMessages');
+                
+                if (data.messages && data.messages.length > 0) {
+                    chatMessages.innerHTML = data.messages.map(msg => {
+                        const date = new Date(msg.timestamp);
+                        const formattedDate = date.toLocaleString();
+                        const messageType = msg.message_type || 'normal';
+                        
+                        return `
+                            <div class="message-item">
+                                <div class="message-header">
+                                    <div>
+                                        <span class="message-role ${msg.role}">${msg.role}</span>
+                                        <span class="message-type-badge ${messageType}">${messageType}</span>
+                                    </div>
+                                    <span class="message-timestamp">${formattedDate}</span>
+                                </div>
+                                <div class="message-content">${msg.content}</div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    chatMessages.innerHTML = '<div class="loading">No messages found for this user</div>';
+                }
+            } catch (error) {
+                document.getElementById('userChatMessages').innerHTML = `
+                    <div class="error">Error loading user chats: ${error.message}</div>
+                `;
+            }
+        }
+
+        function clearSelectedUser() {
+            document.getElementById('selectedUserChats').style.display = 'none';
+            document.getElementById('user-chats').scrollIntoView({ behavior: 'smooth' });
+        }
     </script>
 </body>
 </html> 
