@@ -23,6 +23,66 @@
     <!-- Styles -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        /* Theme Variables - Light Mode (default) */
+        :root {
+            --background: #fafafa;
+            --background-secondary: #f5f5f5;
+            --foreground: #1a1a1a;
+            --card: #ffffff;
+            --card-foreground: #1a1a1a;
+            --primary: #5c73b9;
+            --primary-foreground: #ffffff;
+            --secondary: #f5f5f5;
+            --secondary-foreground: #1a1a1a;
+            --muted: #f5f5f5;
+            --muted-foreground: #737373;
+            --accent: #f0f0f0;
+            --accent-foreground: #1a1a1a;
+            --border: #e5e5e5;
+            --input: #e5e5e5;
+            --destructive: #ef4444;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --shadow-heavy: rgba(0, 0, 0, 0.15);
+            --message-bot-bg: linear-gradient(135deg, #5c73b9 0%, #7c3aed 100%);
+            --message-bot-text: #ffffff;
+            --message-user-bg: #f5f5f5;
+            --message-user-text: #1a1a1a;
+            --message-user-border: #e5e5e5;
+            --header-bg: rgba(255, 255, 255, 0.95);
+            --input-bg: #ffffff;
+            --input-text: #1a1a1a;
+        }
+
+        /* Dark Mode */
+        .dark {
+            --background: #0a0a0a;
+            --background-secondary: #141414;
+            --foreground: #f5f5f5;
+            --card: #141414;
+            --card-foreground: #f5f5f5;
+            --primary: #5c73b9;
+            --primary-foreground: #ffffff;
+            --secondary: #1a1a1a;
+            --secondary-foreground: #f5f5f5;
+            --muted: #1a1a1a;
+            --muted-foreground: #a3a3a3;
+            --accent: #1f1f1f;
+            --accent-foreground: #f5f5f5;
+            --border: #262626;
+            --input: #1a1a1a;
+            --destructive: #ef4444;
+            --shadow-color: rgba(0, 0, 0, 0.4);
+            --shadow-heavy: rgba(0, 0, 0, 0.6);
+            --message-bot-bg: linear-gradient(135deg, #5c73b9 0%, #7c3aed 100%);
+            --message-bot-text: #ffffff;
+            --message-user-bg: #1a1a1a;
+            --message-user-text: #f5f5f5;
+            --message-user-border: #262626;
+            --header-bg: rgba(20, 20, 20, 0.95);
+            --input-bg: #1a1a1a;
+            --input-text: #f5f5f5;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -31,21 +91,24 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            background: var(--background);
+            color: var(--foreground);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .header {
-            background: rgba(15, 23, 42, 0.95);
+            background: var(--header-bg);
             backdrop-filter: blur(10px);
             padding: 1rem;
             text-align: center;
-            color: white;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
-            border-bottom: 2px solid rgba(217, 119, 6, 0.3);
+            color: var(--foreground);
+            box-shadow: 0 2px 20px var(--shadow-color);
+            border-bottom: 1px solid var(--border);
             position: relative;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
         .header h1 {
@@ -68,13 +131,37 @@
         .header p {
             opacity: 0.9;
             font-size: 0.9rem;
-            color: #e2e8f0;
+            color: var(--muted-foreground);
+        }
+
+        /* Theme Toggle Button */
+        .theme-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 6rem;
+            background: var(--secondary);
+            border: 1px solid var(--border);
+            color: var(--foreground);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            background: var(--accent);
+            transform: scale(1.05);
         }
 
         .streak-header-button {
             position: absolute;
             top: 1rem;
-            left: 1rem;
+            left: 5rem;  /* Closer to feelings button */
             background: rgba(251, 191, 36, 0.2);
             border: 2px solid #fbbf24;
             color: #fbbf24;
@@ -103,13 +190,77 @@
             filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.5));
         }
 
+        .feelings-header-button {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;  /* Changed to be first button on the left */
+            background: rgba(139, 92, 246, 0.2);
+            border: 2px solid #8b5cf6;
+            color: #8b5cf6;
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .feelings-header-button:hover {
+            background: rgba(139, 92, 246, 0.3);
+            border-color: #7c3aed;
+            color: #7c3aed;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
+        .feelings-icon {
+            font-size: 1.2rem;
+            filter: drop-shadow(0 0 5px rgba(139, 92, 246, 0.5));
+        }
+
+        .checklist-header-button {
+            position: absolute;
+            top: 1rem;
+            left: 10rem;  /* Even spacing with other buttons */
+            background: rgba(34, 197, 94, 0.2);
+            border: 2px solid #22c55e;
+            color: #22c55e;
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .checklist-header-button:hover {
+            background: rgba(34, 197, 94, 0.3);
+            border-color: #16a34a;
+            color: #16a34a;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+        }
+
+        .checklist-icon {
+            font-size: 1.2rem;
+            filter: drop-shadow(0 0 5px rgba(34, 197, 94, 0.5));
+        }
+
         .logout-button {
             position: absolute;
             top: 1rem;
             right: 1rem;
-            background: rgba(71, 85, 105, 0.8);
-            border: 1px solid #475569;
-            color: #e2e8f0;
+            background: var(--secondary);
+            border: 1px solid var(--border);
+            color: var(--foreground);
             padding: 0.5rem 1rem;
             border-radius: 8px;
             cursor: pointer;
@@ -119,9 +270,8 @@
         }
 
         .logout-button:hover {
-            background: rgba(100, 116, 139, 0.9);
-            border-color: #64748b;
-            color: white;
+            background: var(--accent);
+            border-color: var(--border);
         }
 
         .safety-footer {
@@ -129,18 +279,19 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background: #1e293b;
-            border-top: 2px solid #475569;
+            background: var(--card);
+            border-top: 1px solid var(--border);
             padding: 0.75rem 1rem;
-            color: #cbd5e1;
+            color: var(--muted-foreground);
             font-size: 0.85rem;
             text-align: center;
             z-index: 1000;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 -2px 10px var(--shadow-color);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
         .safety-footer strong {
-            color: #e2e8f0;
+            color: var(--foreground);
         }
 
         .main-content {
@@ -158,28 +309,30 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: #1e293b;
+            background: var(--card);
             border-radius: 20px 20px 0 0;
-            box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 -10px 30px var(--shadow-color);
             height: calc(100vh - 150px);
             max-height: calc(100vh - 150px);
-            border: 1px solid rgba(71, 85, 105, 0.3);
+            border: 1px solid var(--border);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
         .hotlines-sidebar {
             width: 300px;
-            background: #0f172a;
+            background: var(--background-secondary);
             border-radius: 20px;
             padding: 1rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 4px 20px var(--shadow-color);
             height: fit-content;
             position: sticky;
             top: 1rem;
-            border: 1px solid rgba(71, 85, 105, 0.3);
+            border: 1px solid var(--border);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
         .sidebar-header h3 {
-            color: #64748b;
+            color: var(--muted-foreground);
             margin-bottom: 1rem;
             text-align: center;
             font-size: 1.1rem;
@@ -188,7 +341,7 @@
         .hotline-section {
             margin-bottom: 1rem;
             padding-bottom: 0.75rem;
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid var(--border);
         }
 
         .hotline-section:last-child {
@@ -196,7 +349,7 @@
         }
 
         .hotline-section h4 {
-            color: #cbd5e1;
+            color: var(--foreground);
             margin-bottom: 0.5rem;
             font-size: 0.95rem;
         }
@@ -204,20 +357,20 @@
         .hotline-item {
             margin-bottom: 0.5rem;
             padding: 0.4rem;
-            background: #1e293b;
+            background: var(--card);
             border-radius: 6px;
-            border-left: 3px solid #64748b;
+            border-left: 3px solid var(--primary);
         }
 
         .hotline-item strong {
-            color: #f1f5f9;
+            color: var(--foreground);
             display: block;
             margin-bottom: 0.2rem;
             font-size: 0.85rem;
         }
 
         .hotline-item p {
-            color: #94a3b8;
+            color: var(--muted-foreground);
             font-weight: bold;
             margin: 0;
             font-size: 0.8rem;
@@ -226,13 +379,18 @@
         .sidebar-footer {
             text-align: center;
             padding-top: 0.75rem;
-            border-top: 1px solid #334155;
+            border-top: 1px solid var(--border);
         }
 
         .sidebar-footer p {
-            color: #94a3b8;
+            color: var(--muted-foreground);
             font-size: 0.8rem;
             margin: 0;
+        }
+
+        /* Hide close button on desktop - only show on mobile */
+        .sidebar-close-button {
+            display: none;
         }
 
         .messages {
@@ -265,30 +423,31 @@
         }
 
         .message.user .message-avatar {
-            background: #d97706;
-            color: white;
+            background: var(--primary);
+            color: var(--primary-foreground);
         }
 
         .message.assistant .message-avatar {
-            background: #fbbf24;
-            color: #78350f;
+            background: var(--primary);
+            color: var(--primary-foreground);
         }
 
         .message-content {
-            background: #fef3c7;
+            background: var(--message-bot-bg);
             padding: 0.75rem 1rem;
             border-radius: 18px;
             max-width: 70%;
             word-wrap: break-word;
             line-height: 1.4;
-            color: #78350f;
-            border: 1px solid #fbbf24;
+            color: var(--message-bot-text);
+            border: none;
+            transition: background 0.3s ease;
         }
 
         .message.user .message-content {
-            background: #d97706;
-            color: white;
-            border: 1px solid #fbbf24;
+            background: var(--message-user-bg);
+            color: var(--message-user-text);
+            border: 1px solid var(--message-user-border);
         }
 
         .message.crisis .message-content {
@@ -305,10 +464,11 @@
 
         .input-container {
             padding: 1rem;
-            background: #334155;
+            background: var(--background-secondary);
             border-radius: 0 0 20px 20px;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.4);
-            border-top: 1px solid rgba(71, 85, 105, 0.3);
+            box-shadow: 0 -2px 10px var(--shadow-color);
+            border-top: 1px solid var(--border);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
         .input-group {
@@ -320,31 +480,31 @@
         .message-input {
             flex: 1;
             padding: 0.75rem 1rem;
-            border: 2px solid #fbbf24;
+            border: 1px solid var(--border);
             border-radius: 25px;
             font-size: 1rem;
             outline: none;
-            transition: border-color 0.2s;
-            background: white;
-            color: #78350f;
+            transition: border-color 0.2s, background-color 0.3s ease;
+            background: var(--input-bg);
+            color: var(--input-text);
         }
 
         .message-input:focus {
-            border-color: #d97706;
+            border-color: var(--primary);
         }
 
         .message-input::placeholder {
-            color: #a3a3a3;
+            color: var(--muted-foreground);
         }
 
         .send-button {
-            background: #d97706;
-            color: white;
+            background: var(--primary);
+            color: var(--primary-foreground);
             border: none;
             padding: 0.75rem 1rem;
             border-radius: 50%;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: background 0.2s, transform 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -353,18 +513,21 @@
         }
 
         .send-button:hover {
-            background: #b45309;
+            opacity: 0.9;
+            transform: scale(1.05);
         }
 
         .send-button:disabled {
-            background: #64748b;
+            background: var(--muted);
+            color: var(--muted-foreground);
             cursor: not-allowed;
+            transform: none;
         }
 
         .typing-indicator {
             display: none;
             padding: 0.75rem 1rem;
-            color: #cbd5e1;
+            color: var(--muted-foreground);
             font-style: italic;
         }
 
@@ -460,9 +623,16 @@
                 left: 0;
                 right: 0;
                 border-radius: 0;
-                background: #334155;
+                background: var(--background-secondary);
                 z-index: 100;
                 margin: 0;
+            }
+
+            .theme-toggle {
+                right: 4.5rem;
+                width: 36px;
+                height: 36px;
+                font-size: 1rem;
             }
 
             .safety-footer {
@@ -501,14 +671,14 @@
                 width: 85%;
                 max-width: 350px;
                 height: 100vh;
-                background: #0f172a;
+                background: var(--card);
                 border-radius: 0;
                 margin: 0;
                 padding: 1rem;
                 z-index: 2500;
                 transition: right 0.3s ease;
                 overflow-y: auto;
-                box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+                box-shadow: -4px 0 20px var(--shadow-heavy);
             }
 
             .hotlines-sidebar.active {
@@ -519,9 +689,9 @@
                 position: absolute;
                 top: 1rem;
                 right: 1rem;
-                background: rgba(71, 85, 105, 0.8);
+                background: var(--secondary);
                 border: none;
-                color: #cbd5e1;
+                color: var(--foreground);
                 width: 32px;
                 height: 32px;
                 border-radius: 50%;
@@ -674,19 +844,19 @@
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: #1e293b;
-            color: white;
+            background: var(--card);
+            color: var(--foreground);
             padding: 1rem 1.5rem;
             border-radius: 25px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 4px 20px var(--shadow-heavy);
             display: none;
             z-index: 1000;
-            border: 1px solid #475569;
+            border: 1px solid var(--border);
         }
 
         .install-prompt button {
-            background: #475569;
-            color: white;
+            background: var(--primary);
+            color: var(--primary-foreground);
             border: none;
             padding: 0.5rem 1rem;
             border-radius: 20px;
@@ -696,7 +866,7 @@
         }
 
         .install-prompt button:hover {
-            background: #64748b;
+            opacity: 0.9;
         }
 
         /* Streak Modal Styles */
@@ -719,23 +889,24 @@
         }
 
         .streak-container {
-            background: #0f172a;
+            background: var(--card);
             border-radius: 20px;
             padding: 2rem;
             max-width: 500px;
             width: 90%;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-            border: 2px solid rgba(251, 191, 36, 0.3);
+            box-shadow: 0 10px 40px var(--shadow-heavy);
+            border: 1px solid var(--border);
             position: relative;
+            transition: background-color 0.3s ease;
         }
 
         .streak-close-button {
             position: absolute;
             top: 1rem;
             right: 1rem;
-            background: rgba(71, 85, 105, 0.8);
+            background: var(--secondary);
             border: none;
-            color: #cbd5e1;
+            color: var(--foreground);
             width: 32px;
             height: 32px;
             border-radius: 50%;
@@ -748,8 +919,7 @@
         }
 
         .streak-close-button:hover {
-            background: rgba(100, 116, 139, 0.9);
-            color: white;
+            background: var(--accent);
         }
 
         .streak-header {
@@ -906,25 +1076,26 @@
         }
 
         .feelings-modal {
-            background: #1e293b;
-            border: 2px solid #475569;
+            background: var(--card);
+            border: 1px solid var(--border);
             border-radius: 20px;
             padding: 2rem;
             max-width: 400px;
             width: 90%;
             text-align: center;
-            color: white;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            color: var(--foreground);
+            box-shadow: 0 10px 40px var(--shadow-heavy);
+            transition: background-color 0.3s ease;
         }
 
         .feelings-modal h2 {
-            color: #fbbf24;
+            color: var(--primary);
             margin-bottom: 1rem;
             font-size: 1.5rem;
         }
 
         .feelings-modal p {
-            color: #cbd5e1;
+            color: var(--muted-foreground);
             margin-bottom: 2rem;
             line-height: 1.5;
         }
@@ -938,8 +1109,8 @@
         }
 
         .thermometer-number {
-            background: #334155;
-            border: 2px solid #475569;
+            background: var(--secondary);
+            border: 2px solid var(--border);
             border-radius: 50%;
             width: 35px;
             height: 35px;
@@ -948,20 +1119,20 @@
             justify-content: center;
             cursor: pointer;
             transition: all 0.2s ease;
-            color: #cbd5e1;
+            color: var(--foreground);
             font-weight: bold;
             font-size: 0.9rem;
         }
 
         .thermometer-number:hover {
             transform: scale(1.1);
-            border-color: #fbbf24;
+            border-color: var(--primary);
         }
 
         .thermometer-number.selected {
-            background: #d97706;
-            border-color: #fbbf24;
-            color: white;
+            background: var(--primary);
+            border-color: var(--primary);
+            color: var(--primary-foreground);
             transform: scale(1.1);
         }
 
@@ -970,7 +1141,7 @@
             justify-content: space-between;
             margin: 1rem 0;
             font-size: 0.8rem;
-            color: #94a3b8;
+            color: var(--muted-foreground);
         }
 
         .feelings-buttons {
@@ -990,27 +1161,43 @@
         }
 
         .feelings-submit {
-            background: #d97706;
-            color: white;
+            background: var(--primary);
+            color: var(--primary-foreground);
         }
 
         .feelings-submit:hover:not(:disabled) {
-            background: #b45309;
+            opacity: 0.9;
         }
 
         .feelings-submit:disabled {
-            background: #64748b;
+            background: var(--muted);
+            color: var(--muted-foreground);
             cursor: not-allowed;
         }
 
         .feelings-skip {
-            background: #475569;
-            color: #cbd5e1;
+            background: var(--secondary);
+            color: var(--foreground);
         }
 
         .feelings-skip:hover {
-            background: #64748b;
+            background: var(--accent);
+        }
+
+        /* Checklist styles */
+        .checklist-item.completed {
+            background: rgba(34, 197, 94, 0.1) !important;
+            border-color: #22c55e !important;
+        }
+        .checklist-item.completed .checklist-checkbox {
+            background: #22c55e !important;
+            border-color: #22c55e !important;
+        }
+        .checklist-item.completed .checklist-checkbox::after {
+            content: '✓';
             color: white;
+            font-size: 1rem;
+            font-weight: bold;
         }
 
         @media (max-width: 480px) {
@@ -1022,6 +1209,18 @@
 
             .feelings-modal {
                 padding: 1.5rem;
+            }
+
+            .feelings-header-button, .checklist-header-button {
+                padding: 0.3rem 0.6rem;
+                font-size: 0.8rem;
+            }
+
+            .theme-toggle {
+                right: 4rem;
+                width: 32px;
+                height: 32px;
+                font-size: 0.9rem;
             }
         }
 
@@ -1061,15 +1260,27 @@
 </head>
 <body>
             <div class="header">
-            <button class="streak-header-button" id="streakHeaderButton" onclick="openStreakModal()">
+            <!-- Daily Check-ins button first (everyone has access) -->
+            <button class="feelings-header-button" id="feelingsHeaderButton" onclick="openFeelingsModal()">
+                <span class="feelings-icon">🌡️</span>
+            </button>
+            <!-- Streak button (only for 'full' feature group) -->
+            <button class="streak-header-button" id="streakHeaderButton" onclick="openStreakModal()" style="display: none;">
                 <span class="streak-icon">🔥</span>
                 <span id="headerStreakCount">0</span>
+            </button>
+            <!-- Checklist button (only for 'full' feature group) -->
+            <button class="checklist-header-button" id="checklistHeaderButton" onclick="openChecklistModal()" style="display: none;">
+                <span class="checklist-icon">✅</span>
             </button>
             <h1>
                 <img src="/logo.jpeg" alt="MindMitra Logo" class="header-logo">
                 MindMitra
             </h1>
             <p>Your mental health companion and guide</p>
+            <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
+                <i class="fas fa-sun" id="themeIcon"></i>
+            </button>
             <button class="logout-button" onclick="logout()">Logout</button>
             <button class="hamburger-button" id="hamburgerButton" onclick="toggleHelplines()">☰</button>
         </div>
@@ -1204,10 +1415,86 @@
         </div>
     </div>
 
+    <!-- Checklist Modal -->
+    <div class="streak-modal-overlay" id="checklistModal">
+        <div class="streak-container" style="max-width: 500px;">
+            <button class="streak-close-button" onclick="closeChecklistModal()">×</button>
+            <div class="streak-header">
+                <div class="streak-flame">✨</div>
+                <div class="streak-count">Daily Checklist</div>
+                <div class="streak-label">Small steps for well-being</div>
+            </div>
+            <div id="checklistItems" style="margin-top: 1rem;">
+                <div class="checklist-item" data-item="move" onclick="toggleChecklistItem('move')" style="background: rgba(30,41,59,0.6); border: 1px solid #334155; border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; cursor: pointer; display: flex; gap: 1rem; align-items: flex-start;">
+                    <div class="checklist-checkbox" style="width:24px;height:24px;min-width:24px;border:2px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);"></div>
+                    <div style="flex:1"><strong style="color:#e2e8f0;font-size:0.95rem;">🏃 Move Your Body (15 min)</strong><p style="color:#94a3b8;font-size:0.85rem;margin-top:0.25rem;">Take a walk, stretch, dance, or do any activity you enjoy.</p></div>
+                </div>
+                <div class="checklist-item" data-item="breathe" onclick="toggleChecklistItem('breathe')" style="background: rgba(30,41,59,0.6); border: 1px solid #334155; border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; cursor: pointer; display: flex; gap: 1rem; align-items: flex-start;">
+                    <div class="checklist-checkbox" style="width:24px;height:24px;min-width:24px;border:2px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);"></div>
+                    <div style="flex:1"><strong style="color:#e2e8f0;font-size:0.95rem;">🧘 Mindful Break (3 min)</strong><p style="color:#94a3b8;font-size:0.85rem;margin-top:0.25rem;">Take a moment to breathe deeply and reset.</p></div>
+                </div>
+                <div class="checklist-item" data-item="journal" onclick="toggleChecklistItem('journal')" style="background: rgba(30,41,59,0.6); border: 1px solid #334155; border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; cursor: pointer; display: flex; gap: 1rem; align-items: flex-start;">
+                    <div class="checklist-checkbox" style="width:24px;height:24px;min-width:24px;border:2px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);"></div>
+                    <div style="flex:1"><strong style="color:#e2e8f0;font-size:0.95rem;">📝 Daily Reflection</strong><p style="color:#94a3b8;font-size:0.85rem;margin-top:0.25rem;">Write down your thoughts and feelings.</p></div>
+                </div>
+                <div class="checklist-item" data-item="gratitude" onclick="toggleChecklistItem('gratitude')" style="background: rgba(30,41,59,0.6); border: 1px solid #334155; border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; cursor: pointer; display: flex; gap: 1rem; align-items: flex-start;">
+                    <div class="checklist-checkbox" style="width:24px;height:24px;min-width:24px;border:2px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);"></div>
+                    <div style="flex:1"><strong style="color:#e2e8f0;font-size:0.95rem;">🙏 Gratitude Moment</strong><p style="color:#94a3b8;font-size:0.85rem;margin-top:0.25rem;">Think of one thing you're grateful for today.</p></div>
+                </div>
+                <div class="checklist-item" data-item="kindness" onclick="toggleChecklistItem('kindness')" style="background: rgba(30,41,59,0.6); border: 1px solid #334155; border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; cursor: pointer; display: flex; gap: 1rem; align-items: flex-start;">
+                    <div class="checklist-checkbox" style="width:24px;height:24px;min-width:24px;border:2px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);"></div>
+                    <div style="flex:1"><strong style="color:#e2e8f0;font-size:0.95rem;">💚 Spread Kindness</strong><p style="color:#94a3b8;font-size:0.85rem;margin-top:0.25rem;">Do something kind for yourself or others.</p></div>
+                </div>
+            </div>
+            <div style="margin-top:1.5rem;padding:1rem;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:12px;text-align:center;">
+                <div id="checklistProgressText" style="color:#22c55e;font-size:1rem;font-weight:bold;">0 / 5 completed</div>
+                <div style="width:100%;height:8px;background:rgba(30,41,59,0.6);border-radius:4px;margin-top:0.5rem;overflow:hidden;"><div id="checklistProgressFill" style="height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:4px;width:0%;transition:width 0.3s ease;"></div></div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let deferredPrompt;
         let userId = null;
         let selectedFeeling = null;
+        let userFeatureGroup = 'full';  // Default to 'full' group
+
+        // Theme Toggle Functions
+        function initTheme() {
+            const savedTheme = localStorage.getItem('mindmitra_theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            // Default to dark mode, or use saved preference
+            if (savedTheme === 'light') {
+                document.body.classList.remove('dark');
+                updateThemeIcon(false);
+            } else {
+                document.body.classList.add('dark');
+                updateThemeIcon(true);
+            }
+        }
+
+        function toggleTheme() {
+            const isDark = document.body.classList.toggle('dark');
+            localStorage.setItem('mindmitra_theme', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
+
+            // Update meta theme-color for PWA
+            const metaTheme = document.querySelector('meta[name="theme-color"]');
+            if (metaTheme) {
+                metaTheme.content = isDark ? '#0a0a0a' : '#fafafa';
+            }
+        }
+
+        function updateThemeIcon(isDark) {
+            const icon = document.getElementById('themeIcon');
+            if (icon) {
+                icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+            }
+        }
+
+        // Initialize theme immediately to prevent flash
+        initTheme();
         
         // Load chat history from server
         async function loadChatHistory() {
@@ -1265,20 +1552,26 @@
             }
         }
 
-        // Check authentication on page load
+        // Check authentication on page load - OPTIMIZED: single API call
         function checkAuth() {
             const loginId = localStorage.getItem('mindmitra_login_id');
             console.log(`DEBUG: Checking auth, loginId from localStorage: ${loginId}`);
 
             if (!loginId) {
                 console.log('DEBUG: No loginId found, redirecting to login');
-                // Redirect to login if not authenticated
                 window.location.href = '/login';
                 return;
             }
 
-            // Validate session with server
-            fetch('/api/auth/validate', {
+            // OPTIMIZATION: Show UI immediately based on cached feature group
+            const cachedFeatureGroup = localStorage.getItem('mindmitra_feature_group');
+            if (cachedFeatureGroup) {
+                console.log('DEBUG: Using cached feature group:', cachedFeatureGroup);
+                applyFeatureGroup(cachedFeatureGroup);
+            }
+
+            // OPTIMIZATION: Single API call that returns ALL data
+            fetch('/api/init', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1294,35 +1587,120 @@
                         window.location.href = '/consent';
                         return;
                     }
-                    
+
                     userId = loginId;
                     console.log(`DEBUG: Authentication successful, userId set to: ${userId}`);
 
-                    // Load user info
+                    // Load user info and feature group
                     if (data.user) {
                         console.log('Logged in as:', data.user.login_id);
-                        console.log('Access code:', data.user.access_code);
+                        userFeatureGroup = data.user.feature_group || 'full';
+                        console.log('Feature group:', userFeatureGroup);
+
+                        // Cache feature group for instant UI on next visit
+                        localStorage.setItem('mindmitra_feature_group', userFeatureGroup);
+
+                        // Apply feature group (update UI if different from cached)
+                        applyFeatureGroup(userFeatureGroup);
                     }
-                    // Load chat history after successful authentication
-                    console.log('DEBUG: About to load chat history...');
-                    loadChatHistory();
-                    // Check feelings status after authentication
-                    checkFeelingsStatus();
-                    // Load streak data
-                    loadStreakData();
+
+                    // OPTIMIZATION: Use chat history from init response (no extra API call)
+                    if (data.chat_history && data.chat_history.length > 0) {
+                        console.log(`DEBUG: Loaded ${data.chat_history.length} messages from init`);
+                        displayChatHistory(data.chat_history);
+                    } else {
+                        // Show welcome message if no history
+                        showWelcomeMessage();
+                    }
+
+                    // OPTIMIZATION: Use feeling status from init response (no extra API call)
+                    if (data.feeling_status) {
+                        applyFeelingStatus(data.feeling_status);
+                    }
+
+                    // OPTIMIZATION: Use streak data from init response (no extra API call)
+                    if (data.streak_data && userFeatureGroup === 'full') {
+                        applyStreakData(data.streak_data);
+                    }
+
+                    // Load checklist state from localStorage
+                    loadChecklistState();
+
                 } else {
+                    // Handle restricted account
+                    if (data.restricted) {
+                        alert(data.error || 'Your account has been restricted.');
+                    }
                     // Clear invalid session and redirect to login
                     localStorage.removeItem('mindmitra_login_id');
                     localStorage.removeItem('mindmitra_user_type');
+                    localStorage.removeItem('mindmitra_feature_group');
                     window.location.href = '/login';
                 }
             })
             .catch(error => {
-                console.error('Auth validation error:', error);
+                console.error('Auth/init error:', error);
                 localStorage.removeItem('mindmitra_login_id');
                 localStorage.removeItem('mindmitra_user_type');
+                localStorage.removeItem('mindmitra_feature_group');
                 window.location.href = '/login';
             });
+        }
+
+        // Apply feature group to UI
+        function applyFeatureGroup(featureGroup) {
+            if (featureGroup === 'full') {
+                document.getElementById('streakHeaderButton').style.display = 'flex';
+                document.getElementById('checklistHeaderButton').style.display = 'flex';
+            } else {
+                document.getElementById('streakHeaderButton').style.display = 'none';
+                document.getElementById('checklistHeaderButton').style.display = 'none';
+            }
+        }
+
+        // Display chat history from init response - uses existing addMessage function
+        function displayChatHistory(messages) {
+            const messagesContainer = document.getElementById('messages');
+            messagesContainer.innerHTML = '';
+
+            messages.forEach(msg => {
+                addMessage(msg.content, msg.role);
+            });
+        }
+
+        // Show welcome message for new users - uses existing addMessage function
+        function showWelcomeMessage() {
+            const messagesContainer = document.getElementById('messages');
+            messagesContainer.innerHTML = '';
+
+            const welcomeMessage = "Hi there! I'm here to listen and support you. How are you feeling today?";
+            addMessage(welcomeMessage, 'assistant');
+
+            // Save welcome message to database
+            fetch('/api/chat/init', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId, message: welcomeMessage })
+            }).catch(err => console.error('Failed to save welcome message:', err));
+        }
+
+        // Apply feeling status from init response
+        function applyFeelingStatus(status) {
+            if (status.has_recorded) {
+                // User already recorded feeling today
+                const feelingsBtn = document.getElementById('feelingsHeaderButton');
+                if (feelingsBtn) {
+                    feelingsBtn.style.opacity = '0.6';
+                    feelingsBtn.title = `Today's check-in: ${status.feeling_score}/10`;
+                }
+            }
+        }
+
+        // Apply streak data from init response - uses existing renderStreak function
+        function applyStreakData(streakData) {
+            if (!streakData) return;
+            console.log('Applying streak data from init:', streakData);
+            renderStreak(streakData);
         }
         
         // Logout function
@@ -1337,9 +1715,10 @@
                     body: JSON.stringify({ login_id: loginId })
                 }).catch(error => console.error('Logout error:', error));
             }
-            
+
             localStorage.removeItem('mindmitra_login_id');
             localStorage.removeItem('mindmitra_user_type');
+            localStorage.removeItem('mindmitra_feature_group');
             window.location.href = '/login';
         }
 
@@ -1436,8 +1815,10 @@
                     // Add bot response
                     addMessage(data.response, 'assistant', data.type);
 
-                    // Update streak after successful message
-                    loadStreakData();
+                    // Update streak after successful message (only for 'full' group)
+                    if (userFeatureGroup === 'full') {
+                        loadStreakData();
+                    }
                 }
             } catch (error) {
                 addMessage('Sorry, something went wrong. Please try again.', 'assistant', 'error');
@@ -1550,6 +1931,9 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    // Mark that user has completed feelings check at least once
+                    localStorage.setItem('mindmitra_feelings_completed_' + userId, 'true');
+                    
                     // Show success message briefly
                     document.querySelector('.feelings-modal h2').textContent = '✅ Thank you!';
                     document.querySelector('.feelings-modal p').textContent = `Your feeling score of ${selectedFeeling}/10 has been recorded for today.`;
@@ -1575,11 +1959,123 @@
             }
         }
 
-        function skipFeelingsCheck() {
-            document.getElementById('feelingsOverlay').style.display = 'none';
+        async function openFeelingsModal() {
+            if (!userId) return;
+            
+            try {
+                const response = await fetch('/api/feelings/check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ user_id: userId })
+                });
 
-            // Store that user skipped today (optional - could use localStorage)
+                const data = await response.json();
+
+                // If already recorded today, show a different message
+                if (data.recorded_today) {
+                    document.querySelector('.feelings-modal h2').textContent = '✅ Already Recorded';
+                    document.querySelector('.feelings-modal p').textContent = `You've already recorded your feeling today (${data.feeling_score}/10). You can only submit once per day.`;
+                    document.querySelector('.feelings-buttons').style.display = 'none';
+                    document.getElementById('thermometerContainer').style.display = 'none';
+                    document.querySelector('.feelings-scale').style.display = 'none';
+                    
+                    // Show modal
+                    document.getElementById('feelingsOverlay').style.display = 'flex';
+                    
+                    // Auto-hide after 3 seconds
+                    setTimeout(() => {
+                        document.getElementById('feelingsOverlay').style.display = 'none';
+                    }, 3000);
+                    return;
+                }
+            } catch (error) {
+                console.error('Error checking feelings status:', error);
+            }
+            
+            // Reset modal to initial state
+            document.querySelector('.feelings-modal h2').textContent = '🌡️ Daily Check-In';
+            document.querySelector('.feelings-modal p').textContent = 'How are you feeling today? Rate your overall mood on a scale of 0-10.';
+            document.querySelector('.feelings-buttons').style.display = 'flex';
+            document.getElementById('thermometerContainer').style.display = 'flex';
+            document.querySelector('.feelings-scale').style.display = 'flex';
+            
+            // Reset submit button
+            const submitButton = document.getElementById('submitFeeling');
+            submitButton.disabled = true;
+            submitButton.textContent = 'Submit';
+            
+            // Clear selection
+            selectedFeeling = null;
+            document.querySelectorAll('.thermometer-number').forEach(num => {
+                num.classList.remove('selected');
+            });
+            
+            // Show the modal
+            document.getElementById('feelingsOverlay').style.display = 'flex';
+        }
+
+        function skipFeelingsCheck() {
+            localStorage.setItem('mindmitra_feelings_completed_' + userId, 'true');
+            document.getElementById('feelingsOverlay').style.display = 'none';
             localStorage.setItem('mindmitra_feelings_skipped_' + new Date().toDateString(), 'true');
+        }
+
+        function openChecklistModal() {
+            loadChecklistState();
+            document.getElementById('checklistModal').classList.add('active');
+        }
+
+        function closeChecklistModal() {
+            document.getElementById('checklistModal').classList.remove('active');
+        }
+
+        function toggleChecklistItem(itemId) {
+            const item = document.querySelector(`.checklist-item[data-item="${itemId}"]`);
+            if (!item) return;
+            item.classList.toggle('completed');
+            saveChecklistState();
+            updateChecklistProgress();
+        }
+
+        function saveChecklistState() {
+            if (!userId) return;
+            const today = new Date().toDateString();
+            const checklistKey = `mindmitra_checklist_${userId}_${today}`;
+            const completedItems = [];
+            document.querySelectorAll('.checklist-item.completed').forEach(item => {
+                completedItems.push(item.getAttribute('data-item'));
+            });
+            localStorage.setItem(checklistKey, JSON.stringify(completedItems));
+        }
+
+        function loadChecklistState() {
+            if (!userId) return;
+            const today = new Date().toDateString();
+            const checklistKey = `mindmitra_checklist_${userId}_${today}`;
+            document.querySelectorAll('.checklist-item').forEach(item => item.classList.remove('completed'));
+            const savedState = localStorage.getItem(checklistKey);
+            if (savedState) {
+                const completedItems = JSON.parse(savedState);
+                completedItems.forEach(itemId => {
+                    const item = document.querySelector(`.checklist-item[data-item="${itemId}"]`);
+                    if (item) item.classList.add('completed');
+                });
+            }
+            updateChecklistProgress();
+        }
+
+        function updateChecklistProgress() {
+            const totalItems = document.querySelectorAll('.checklist-item').length;
+            const completedItems = document.querySelectorAll('.checklist-item.completed').length;
+            const progressText = document.getElementById('checklistProgressText');
+            const progressFill = document.getElementById('checklistProgressFill');
+            if (progressText) progressText.textContent = `${completedItems} / ${totalItems} completed`;
+            if (progressFill) progressFill.style.width = `${(completedItems / totalItems) * 100}%`;
+            if (completedItems === totalItems && totalItems > 0 && progressText) {
+                setTimeout(() => progressText.textContent = '🎉 Amazing! All tasks completed!', 300);
+            }
         }
 
         // Streak Functions

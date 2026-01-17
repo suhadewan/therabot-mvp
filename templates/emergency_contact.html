@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Contact - MindMitra</title>
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            min-height: 100vh;
+            padding: 1rem;
+            line-height: 1.6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .contact-container {
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+            background: rgba(30, 41, 59, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            border: 1px solid rgba(71, 85, 105, 0.3);
+        }
+        
+        .contact-header {
+            background: rgba(15, 23, 42, 0.95);
+            color: #e2e8f0;
+            padding: 2rem;
+            text-align: center;
+            border-bottom: 2px solid rgba(217, 119, 6, 0.3);
+        }
+        
+        .contact-header h1 {
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+            color: #fbbf24;
+        }
+        
+        .contact-header p {
+            font-size: 1rem;
+            opacity: 0.95;
+            color: #cbd5e1;
+        }
+        
+        .contact-content {
+            padding: 2rem;
+            background: #1e293b;
+        }
+        
+        .info-box {
+            background: rgba(217, 119, 6, 0.1);
+            border-left: 4px solid #d97706;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+        }
+        
+        .info-box p {
+            color: #cbd5e1;
+            margin-bottom: 0.75rem;
+            line-height: 1.6;
+        }
+        
+        .info-box strong {
+            color: #fbbf24;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            color: #fbbf24;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid #475569;
+            border-radius: 10px;
+            color: #e2e8f0;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #d97706;
+            background: rgba(15, 23, 42, 0.8);
+        }
+        
+        .form-group input::placeholder {
+            color: #64748b;
+        }
+        
+        .required {
+            color: #ef4444;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-submit {
+            background: #d97706;
+            color: white;
+        }
+        
+        .btn-submit:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(217, 119, 6, 0.5);
+            background: #f59e0b;
+        }
+        
+        .btn-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-skip {
+            background: #475569;
+            color: #e2e8f0;
+        }
+        
+        .btn-skip:hover {
+            background: #334155;
+        }
+        
+        .error-message {
+            background: rgba(239, 68, 68, 0.2);
+            border-left: 4px solid #ef4444;
+            color: #fca5a5;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 0.5rem;
+            }
+            
+            .contact-header {
+                padding: 1.5rem;
+            }
+            
+            .contact-header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .contact-content {
+                padding: 1.5rem;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="contact-container">
+        <div class="contact-header">
+            <h1>🆘 Emergency Contact</h1>
+            <p>Help us keep you safe</p>
+        </div>
+        
+        <div class="contact-content">
+            <div class="info-box">
+                <p><strong>Important:</strong> Talking about personal challenges can sometimes stir up difficult emotions like sadness, guilt, or loneliness. This is normal and often part of the process.</p>
+                <p>When you may be at <strong>serious risk of harm to yourself or others</strong>, we may need to contact someone you trust. <strong>This is only if you are at harm and only to help keep you safe.</strong> No other details will be shared.</p>
+                <p><strong>⚠️ If you do not provide an emergency contact, we may need to contact emergency services directly instead.</strong></p>
+                <p>Please share the contact of someone you trust, in case of emergencies:</p>
+            </div>
+            
+            <div class="error-message" id="errorMessage"></div>
+            
+            <form id="emergencyContactForm">
+                <div class="form-group">
+                    <label for="contactName">Name: <span class="required">*</span></label>
+                    <input type="text" id="contactName" name="contactName" placeholder="Enter full name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="contactRelationship">Relationship: <span class="required">*</span></label>
+                    <input type="text" id="contactRelationship" name="contactRelationship" placeholder="E.g., Parent, Sibling, Friend, Roommate" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="contactPhone">Contact No.: <span class="required">*</span></label>
+                    <input type="tel" id="contactPhone" name="contactPhone" placeholder="Enter phone number" required>
+                </div>
+                
+                <div class="button-group">
+                    <button type="button" class="btn btn-skip" onclick="skipEmergencyContact()">Skip for Now</button>
+                    <button type="submit" class="btn btn-submit" id="submitBtn">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        // Check authentication on page load
+        function checkAuth() {
+            const loginId = localStorage.getItem('mindmitra_login_id');
+            if (!loginId) {
+                // Not logged in, redirect to login
+                window.location.href = '/login';
+                return;
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('emergencyContactForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            // Get form values
+            const name = document.getElementById('contactName').value.trim();
+            const relationship = document.getElementById('contactRelationship').value.trim();
+            const phone = document.getElementById('contactPhone').value.trim();
+            
+            // Validation
+            if (!name || !relationship || !phone) {
+                errorMessage.textContent = 'Please fill in all required fields';
+                errorMessage.style.display = 'block';
+                return;
+            }
+            
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+            errorMessage.style.display = 'none';
+            
+            try {
+                const loginId = localStorage.getItem('mindmitra_login_id');
+                
+                const response = await fetch('/api/emergency-contact', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: loginId,
+                        name: name,
+                        relationship: relationship,
+                        phone: phone
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Redirect to chat
+                    window.location.href = '/';
+                } else {
+                    errorMessage.textContent = data.error || 'Failed to save emergency contact';
+                    errorMessage.style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit';
+                }
+            } catch (error) {
+                console.error('Error submitting emergency contact:', error);
+                errorMessage.textContent = 'Error submitting form. Please try again.';
+                errorMessage.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit';
+            }
+        });
+
+        function skipEmergencyContact() {
+            // User chose to skip - show serious warning
+            const message = '⚠️ WARNING: Without an emergency contact, we may need to contact emergency services (police/ambulance) directly if we believe you are at serious risk of harm.\n\nAre you sure you want to skip providing an emergency contact?';
+            
+            if (confirm(message)) {
+                window.location.href = '/';
+            }
+        }
+
+        // Check auth on page load
+        checkAuth();
+    </script>
+</body>
+</html>
+

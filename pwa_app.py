@@ -209,79 +209,65 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
     # Simplified: user_id IS the access_code
     access_code = user_id
 
-    # Check if user's access code is still active (not restricted)
+    # OPTIMIZATION: Skip access code validation on every message
+    # User already validated at login - only check if restricted in DB during save
+    # This saves 2-3 seconds per message!
     db = get_database()
-    code_validation = db.validate_access_code(access_code)
-    log_timing("Access code validation")
-    
-    if not code_validation.get('valid'):
-        return {
-            "type": "error",
-            "response": "Your access has been restricted. Please contact support if you believe this is an error.",
-            "restricted": True,
-            "timestamp": "now"
-        }
 
-    # Load recent chat history from database
-    # Reduced from 100 to 20 for faster response times
-    try:
-        db = get_database()
-        chat_history = db.get_chat_history(user_id, limit=20)  # Get recent messages
-        log_timing("Chat history loaded")
+    # OPTIMIZATION: Check if session already loaded to avoid redundant DB queries
+    if user_id in user_sessions and len(user_sessions[user_id].get('messages', [])) > 0:
+        session_messages = user_sessions[user_id]['messages']
+        print(f"DEBUG: Using cached session with {len(session_messages)} messages for user {user_id}")
+    else:
+        # Load recent chat history from database
+        # Reduced from 100 to 20 for faster response times
+        try:
+            chat_history = db.get_chat_history(user_id, limit=20)  # Get recent messages
+            log_timing("Chat history loaded")
 
-        # Load all recent messages (no timezone filtering)
-        session_messages = []
-        for msg in chat_history:
-            session_messages.append({
-                "role": msg['role'],
-                "content": msg['content']
-            })
+            # Load all recent messages (no timezone filtering)
+            session_messages = []
+            for msg in chat_history:
+                session_messages.append({
+                    "role": msg['role'],
+                    "content": msg['content']
+                })
 
-        # Initialize or update user session
-        user_sessions[user_id] = {
-            'messages': session_messages,
-            'rate_limit': user_sessions.get(user_id, {}).get('rate_limit', [])
-        }
+            # Initialize or update user session
+            user_sessions[user_id] = {
+                'messages': session_messages,
+                'rate_limit': user_sessions.get(user_id, {}).get('rate_limit', [])
+            }
 
-        print(f"DEBUG: Loaded {len(session_messages)} messages for user {user_id}")
+            print(f"DEBUG: Loaded {len(session_messages)} messages for user {user_id}")
 
-    except Exception as e:
-        print(f"Error loading chat history: {e}")
-        # Initialize empty session if database load fails
-        user_sessions[user_id] = {
-            'messages': [],
-            'rate_limit': user_sessions.get(user_id, {}).get('rate_limit', [])
-        }
+        except Exception as e:
+            print(f"Error loading chat history: {e}")
+            # Initialize empty session if database load fails
+            user_sessions[user_id] = {
+                'messages': [],
+                'rate_limit': user_sessions.get(user_id, {}).get('rate_limit', [])
+            }
+            session_messages = []
 
     # Save user message to database immediately
     try:
-        db = get_database()
         db.save_chat_message(user_id, access_code, "user", message_text)
         log_timing("User message saved")
         
-        # Only update streak if it hasn't been updated today (smart optimization!)
-        today = get_india_today()
+        # Update streak in background thread (non-blocking)
+        # Each message increments message_count for today
+        def update_streak_background():
+            try:
+                db = get_database()
+                db.update_streak(user_id, access_code)
+                print(f"DEBUG: Streak message count incremented for user {user_id}")
+            except Exception as e:
+                print(f"Error updating streak in background: {e}")
+
+        streak_thread = threading.Thread(target=update_streak_background, daemon=True)
+        streak_thread.start()
         
-        # Check if we've already updated the streak today for this user
-        session_key = f"{user_id}_streak_updated"
-        last_streak_update = user_sessions[user_id].get(session_key)
-        
-        if last_streak_update != today:
-            # Update streak in background (non-blocking) - only first message of the day
-            def update_streak_background():
-                try:
-                    db = get_database()
-                    db.update_streak(user_id, access_code)
-                    # Mark as updated today
-                    user_sessions[user_id][session_key] = today
-                    print(f"DEBUG: Streak updated for user {user_id} (first message today)")
-                except Exception as e:
-                    print(f"Error updating streak in background: {e}")
-            
-            streak_thread = threading.Thread(target=update_streak_background, daemon=True)
-            streak_thread.start()
-        else:
-            print(f"DEBUG: Streak already updated today for user {user_id}, skipping")
     except Exception as e:
         print(f"Error saving user message: {e}")
     
@@ -587,6 +573,13 @@ def index():
         # Redirect to consent page if not consented yet
         return redirect(url_for('consent'))
     
+    # Check if user has submitted emergency contact
+    has_emergency_contact = db.check_emergency_contact_submitted(user_id)
+    
+    if not has_emergency_contact:
+        # Redirect to emergency contact page if not submitted yet
+        return redirect(url_for('emergency_contact'))
+    
     return render_template('index.html')
 
 @app.route('/login')
@@ -600,6 +593,11 @@ def consent():
     # Don't check Flask session here - frontend handles auth via localStorage
     # The consent.html page will check localStorage and validate with the API
     return render_template('consent.html')
+
+@app.route('/emergency-contact')
+def emergency_contact():
+    """Serve the emergency contact page"""
+    return render_template('emergency_contact.html')
 
 @app.route('/admin-login')
 def admin_login_page():
@@ -960,6 +958,9 @@ def auth_login():
 
         # Check consent status
         has_consented = db.check_user_consent(access_code)
+        
+        # Check emergency contact status
+        has_emergency_contact = db.check_emergency_contact_submitted(access_code)
 
         return jsonify({
             "success": True,
@@ -967,7 +968,9 @@ def auth_login():
             "user_type": code_validation['user_type'],
             "message": "Login successful",
             "has_consented": has_consented,
-            "needs_consent": not has_consented
+            "needs_consent": not has_consented,
+            "has_emergency_contact": has_emergency_contact,
+            "needs_emergency_contact": not has_emergency_contact
         })
 
     except Exception as e:
@@ -996,16 +999,25 @@ def validate_session():
 
             # Check consent status
             has_consented = db.check_user_consent(login_id)
+            
+            # Check emergency contact status
+            has_emergency_contact = db.check_emergency_contact_submitted(login_id)
 
+            # Get feature group for A/B testing
+            feature_group = code_validation.get('feature_group', 'full')
+            
             return jsonify({
                 "valid": True,
                 "user": {
                     "login_id": login_id,
                     "access_code": login_id,
-                    "user_type": code_validation['user_type']
+                    "user_type": code_validation['user_type'],
+                    "feature_group": feature_group
                 },
                 "has_consented": has_consented,
-                "needs_consent": not has_consented
+                "needs_consent": not has_consented,
+                "has_emergency_contact": has_emergency_contact,
+                "needs_emergency_contact": not has_emergency_contact
             })
         else:
             return jsonify({"valid": False, "error": "Invalid access code"}), 401
@@ -1015,6 +1027,78 @@ def validate_session():
         import traceback
         traceback.print_exc()
         return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/init', methods=['POST'])
+def init_app():
+    """
+    Combined initialization endpoint - returns all data in ONE call.
+    Replaces: validate-session + chat-history + feelings-status + streak
+    Optimized for performance with 3000-4000 users.
+    """
+    try:
+        data = request.get_json()
+        login_id = data.get('login_id', '').strip()
+
+        if not login_id:
+            return jsonify({"valid": False, "error": "Login ID is required"}), 400
+
+        db = get_database()
+
+        # 1. Validate access code
+        code_validation = db.validate_access_code(login_id)
+
+        if not code_validation.get('valid'):
+            return jsonify({
+                "valid": False,
+                "error": code_validation.get('error', 'Invalid access code'),
+                "restricted": code_validation.get('restricted', False)
+            }), 401
+
+        # Set Flask session
+        session['user_id'] = login_id
+        session['access_code'] = login_id
+        session['login_id'] = login_id
+
+        feature_group = code_validation.get('feature_group', 'full')
+
+        # 2. Get consent and emergency contact status
+        has_consented = db.check_user_consent(login_id)
+        has_emergency_contact = db.check_emergency_contact_submitted(login_id)
+
+        # 3. Get chat history (limit to 50 for performance)
+        chat_history = db.get_chat_history(login_id, limit=50)
+        messages = [{"role": msg['role'], "content": msg['content'], "timestamp": msg.get('timestamp')} for msg in chat_history]
+
+        # 4. Get feelings status for today
+        feeling_status = db.get_feeling_for_today(login_id)
+
+        # 5. Get streak data (only if full access to avoid unnecessary DB call)
+        streak_data = None
+        if feature_group == 'full':
+            streak_data = db.get_streak_data(login_id)
+
+        return jsonify({
+            "valid": True,
+            "user": {
+                "login_id": login_id,
+                "access_code": login_id,
+                "user_type": code_validation['user_type'],
+                "feature_group": feature_group
+            },
+            "has_consented": has_consented,
+            "needs_consent": not has_consented,
+            "has_emergency_contact": has_emergency_contact,
+            "needs_emergency_contact": not has_emergency_contact,
+            "chat_history": messages,
+            "feeling_status": feeling_status,
+            "streak_data": streak_data
+        })
+
+    except Exception as e:
+        logger.error(f"Init error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"valid": False, "error": "Internal server error"}), 500
 
 @app.route('/api/auth/logout', methods=['POST'])
 def logout():
@@ -1069,7 +1153,7 @@ def save_consent():
             session['access_code'] = access_code
             session['login_id'] = user_id
 
-            return jsonify({"success": True, "consent_accepted": True})
+            return jsonify({"success": True, "consent_accepted": True, "next": "emergency_contact"})
         else:
             # User DECLINED - save decision but log them out
             # They can log in again with the same code and see the consent form again
@@ -1086,6 +1170,56 @@ def save_consent():
 
     except Exception as e:
         logger.error(f"Consent save error: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/emergency-contact', methods=['POST'])
+def save_emergency_contact():
+    """Save user's emergency contact information"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', '').strip()
+        name = data.get('name', '').strip()
+        relationship = data.get('relationship', '').strip()
+        phone = data.get('phone', '').strip()
+
+        if not user_id:
+            return jsonify({"error": "User ID is required"}), 400
+
+        if not name or not relationship or not phone:
+            return jsonify({"error": "All fields are required"}), 400
+
+        db = get_database()
+        success = db.save_emergency_contact(user_id, name, relationship, phone)
+
+        if success:
+            logger.info(f"Emergency contact saved for user {user_id}")
+            return jsonify({"success": True, "message": "Emergency contact saved successfully"})
+        else:
+            return jsonify({"error": "Failed to save emergency contact"}), 500
+
+    except Exception as e:
+        logger.error(f"Error saving emergency contact: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/emergency-contact/check', methods=['POST'])
+def check_emergency_contact():
+    """Check if user has submitted emergency contact"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', '').strip()
+
+        if not user_id:
+            return jsonify({"error": "User ID is required"}), 400
+
+        db = get_database()
+        submitted = db.check_emergency_contact_submitted(user_id)
+
+        return jsonify({"submitted": submitted})
+
+    except Exception as e:
+        logger.error(f"Error checking emergency contact: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
 @app.route('/api/admin/login', methods=['POST'])
@@ -1180,21 +1314,25 @@ def update_access_code(code):
         data = request.get_json()
         is_active = data.get('is_active')
         max_uses = data.get('max_uses')
-        
-        if is_active is None and max_uses is None:
+        feature_group = data.get('feature_group')
+
+        if is_active is None and max_uses is None and feature_group is None:
             return jsonify({"error": "At least one field to update is required"}), 400
-        
+
         if max_uses is not None and max_uses < 1:
             return jsonify({"error": "Max uses must be at least 1"}), 400
-        
+
+        if feature_group is not None and feature_group not in ['full', 'basic']:
+            return jsonify({"error": "Feature group must be 'full' or 'basic'"}), 400
+
         db = get_database()
-        success = db.update_access_code(code, is_active, max_uses)
-        
+        success = db.update_access_code(code, is_active, max_uses, feature_group)
+
         if success:
             return jsonify({"success": True, "message": f"Access code {code} updated successfully"})
         else:
             return jsonify({"error": "Failed to update access code"}), 500
-            
+
     except Exception as e:
         print(f"Error updating access code: {e}")
         return jsonify({"error": "Internal server error"}), 500
