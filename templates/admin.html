@@ -705,6 +705,16 @@
                         Change the maximum number of times this code can be used
                     </small>
                 </div>
+                <div class="form-group">
+                    <label for="edit_feature_group">Feature Group</label>
+                    <select id="edit_feature_group" required>
+                        <option value="full">Full (Streaks + Checklist)</option>
+                        <option value="basic">Basic (No Streaks/Checklist)</option>
+                    </select>
+                    <small style="color: #6b7280; display: block; margin-top: 0.5rem;">
+                        Full: All features | Basic: Chat + Daily Check-ins only
+                    </small>
+                </div>
                 <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
                     <button type="button" onclick="closeEditModal()" class="btn" style="background: #e5e7eb; color: #374151;">
                         Cancel
@@ -914,8 +924,9 @@
                             <div class="access-code-info">
                                 <div class="access-code-code">${code.code}</div>
                                 <div class="access-code-details">
-                                    Type: ${code.user_type} | School: ${code.school_id || 'N/A'} | 
-                                    Uses: ${code.current_uses}/${code.max_uses} | 
+                                    Type: ${code.user_type} | School: ${code.school_id || 'N/A'} |
+                                    Uses: ${code.current_uses}/${code.max_uses} |
+                                    Group: <strong style="color: ${code.feature_group === 'full' ? '#16a34a' : '#d97706'}">${code.feature_group || 'full'}</strong> |
                                     Created: ${new Date(code.created_at).toLocaleDateString()}
                                 </div>
                             </div>
@@ -923,7 +934,7 @@
                                 <span class="status-badge ${code.is_active ? 'active' : 'inactive'}">
                                     ${code.is_active ? 'Active' : 'Inactive'}
                                 </span>
-                                <button onclick="openEditModal('${code.code}', ${code.max_uses})"
+                                <button onclick="openEditModal('${code.code}', ${code.max_uses}, '${code.feature_group || 'full'}')"
                                         class="btn btn-primary btn-small">
                                     Edit
                                 </button>
@@ -994,9 +1005,10 @@
         }
 
         // Edit access code modal functions
-        function openEditModal(code, currentMaxUses) {
+        function openEditModal(code, currentMaxUses, featureGroup) {
             document.getElementById('edit_code').value = code;
             document.getElementById('edit_max_uses').value = currentMaxUses;
+            document.getElementById('edit_feature_group').value = featureGroup || 'full';
             document.getElementById('editModal').classList.add('show');
         }
 
@@ -1011,6 +1023,7 @@
 
             const code = document.getElementById('edit_code').value;
             const maxUses = parseInt(document.getElementById('edit_max_uses').value);
+            const featureGroup = document.getElementById('edit_feature_group').value;
 
             if (maxUses < 1) {
                 alert('Maximum uses must be at least 1');
@@ -1023,7 +1036,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ max_uses: maxUses })
+                    body: JSON.stringify({ max_uses: maxUses, feature_group: featureGroup })
                 });
 
                 const result = await response.json();

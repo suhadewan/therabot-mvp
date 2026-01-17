@@ -103,7 +103,7 @@ class DatabaseInterface(ABC):
         pass
 
     @abstractmethod
-    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None) -> bool:
+    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None, feature_group: str = None) -> bool:
         """Update access code properties"""
         pass
 
@@ -185,6 +185,16 @@ class DatabaseInterface(ABC):
     @abstractmethod
     def save_user_consent(self, user_id: str, access_code: str, consent_accepted: bool) -> bool:
         """Save user's consent decision"""
+        pass
+
+    @abstractmethod
+    def save_emergency_contact(self, user_id: str, name: str, relationship: str, phone: str) -> bool:
+        """Save user's emergency contact information"""
+        pass
+
+    @abstractmethod
+    def check_emergency_contact_submitted(self, user_id: str) -> bool:
+        """Check if user has submitted emergency contact"""
         pass
 
     @abstractmethod
@@ -380,6 +390,10 @@ class SQLiteDatabase(DatabaseInterface):
                     access_code TEXT NOT NULL,
                     consent_accepted BOOLEAN NOT NULL,
                     consent_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    emergency_contact_name TEXT,
+                    emergency_contact_relationship TEXT,
+                    emergency_contact_phone TEXT,
+                    emergency_contact_submitted BOOLEAN DEFAULT FALSE,
                     FOREIGN KEY (access_code) REFERENCES access_codes (code)
                 )
             ''')
@@ -413,6 +427,12 @@ class SQLiteDatabase(DatabaseInterface):
             cursor.execute('''
                 CREATE INDEX IF NOT EXISTS idx_chat_messages_access_code
                 ON chat_messages(access_code)
+            ''')
+            
+            # CRITICAL: Index on access_codes for fast validation
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_access_codes_code
+                ON access_codes(code)
             ''')
 
             cursor.execute('''
@@ -579,7 +599,7 @@ class SQLiteDatabase(DatabaseInterface):
 
             # First check if code exists at all
             cursor.execute('''
-                SELECT code, user_type, school_id, is_active, max_uses, current_uses
+                SELECT code, user_type, school_id, is_active, max_uses, current_uses, feature_group
                 FROM access_codes
                 WHERE code = ?
             ''', (code,))
@@ -600,6 +620,7 @@ class SQLiteDatabase(DatabaseInterface):
             is_active = row[3]
             max_uses = row[4]
             current_uses = row[5]
+            feature_group = row[6] if len(row) > 6 else 'full'  # Default to 'full' for backwards compatibility
 
             # Check if code is inactive (restricted)
             if not is_active:
@@ -617,10 +638,12 @@ class SQLiteDatabase(DatabaseInterface):
                 }
 
             return {
+                    'valid': True,
                     'code': code_data,
                     'user_type': user_type,
                     'school_id': school_id,
                     'is_active': is_active,
+                    'feature_group': feature_group,
                     'max_uses': max_uses,
                     'current_uses': current_uses,
                     'valid': True
@@ -847,14 +870,14 @@ class SQLiteDatabase(DatabaseInterface):
             cursor = conn.cursor()
             
             cursor.execute('''
-                SELECT code, user_type, school_id, is_active, max_uses, current_uses, created_at, created_by
-                FROM access_codes 
+                SELECT code, user_type, school_id, is_active, max_uses, current_uses, created_at, created_by, feature_group
+                FROM access_codes
                 ORDER BY created_at DESC
             ''')
-            
+
             rows = cursor.fetchall()
             conn.close()
-            
+
             access_codes = []
             for row in rows:
                 access_codes.append({
@@ -865,7 +888,8 @@ class SQLiteDatabase(DatabaseInterface):
                     'max_uses': row[4],
                     'current_uses': row[5],
                     'created_at': row[6],
-                    'created_by': row[7]
+                    'created_by': row[7],
+                    'feature_group': row[8] or 'full'
                 })
             
             return access_codes
@@ -874,39 +898,43 @@ class SQLiteDatabase(DatabaseInterface):
             logger.error(f"Error getting access codes: {e}")
             return []
 
-    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None) -> bool:
+    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None, feature_group: str = None) -> bool:
         """Update access code properties"""
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
-            
+
             update_fields = []
             params = []
-            
+
             if is_active is not None:
                 update_fields.append("is_active = ?")
                 params.append(is_active)
-            
+
             if max_uses is not None:
                 update_fields.append("max_uses = ?")
                 params.append(max_uses)
-            
+
+            if feature_group is not None:
+                update_fields.append("feature_group = ?")
+                params.append(feature_group)
+
             if not update_fields:
                 return False
-            
+
             params.append(code)
-            
+
             cursor.execute(f'''
-                UPDATE access_codes 
+                UPDATE access_codes
                 SET {', '.join(update_fields)}
                 WHERE code = ?
             ''', params)
-            
+
             conn.commit()
             conn.close()
             logger.info(f"Access code updated: {code}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Error updating access code: {e}")
             return False
@@ -1394,6 +1422,55 @@ class SQLiteDatabase(DatabaseInterface):
 
         except Exception as e:
             logger.error(f"Error saving user consent: {e}")
+            return False
+
+    def save_emergency_contact(self, user_id: str, name: str, relationship: str, phone: str) -> bool:
+        """Save user's emergency contact information to SQLite"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Update existing consent record with emergency contact
+            cursor.execute('''
+                UPDATE user_consents 
+                SET emergency_contact_name = ?,
+                    emergency_contact_relationship = ?,
+                    emergency_contact_phone = ?,
+                    emergency_contact_submitted = TRUE
+                WHERE user_id = ?
+            ''', (name, relationship, phone, user_id))
+
+            conn.commit()
+            conn.close()
+            logger.info(f"Saved emergency contact for user {user_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error saving emergency contact: {e}")
+            return False
+
+    def check_emergency_contact_submitted(self, user_id: str) -> bool:
+        """Check if user has submitted emergency contact from SQLite"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT emergency_contact_submitted
+                FROM user_consents
+                WHERE user_id = ?
+            ''', (user_id,))
+
+            row = cursor.fetchone()
+            conn.close()
+
+            if row:
+                return bool(row[0])
+            else:
+                return False
+
+        except Exception as e:
+            logger.error(f"Error checking emergency contact submission: {e}")
             return False
 
     def update_streak(self, user_id: str, access_code: str) -> bool:
@@ -2213,6 +2290,10 @@ class PostgreSQLDatabase(DatabaseInterface):
                     access_code TEXT NOT NULL,
                     consent_accepted BOOLEAN NOT NULL,
                     consent_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    emergency_contact_name TEXT,
+                    emergency_contact_relationship TEXT,
+                    emergency_contact_phone TEXT,
+                    emergency_contact_submitted BOOLEAN DEFAULT FALSE,
                     FOREIGN KEY (access_code) REFERENCES access_codes (code)
                 )
             ''')
@@ -2372,7 +2453,7 @@ class PostgreSQLDatabase(DatabaseInterface):
 
             # First check if code exists (regardless of is_active)
             cursor.execute('''
-                SELECT code, user_type, school_id, is_active, max_uses, current_uses
+                SELECT code, user_type, school_id, is_active, max_uses, current_uses, feature_group
                 FROM access_codes
                 WHERE code = %s
             ''', (code,))
@@ -2394,6 +2475,7 @@ class PostgreSQLDatabase(DatabaseInterface):
             is_active = row[3]
             max_uses = row[4]
             current_uses = row[5]
+            feature_group = row[6] if len(row) > 6 and row[6] else 'full'
 
             # Check if code is inactive (restricted)
             if not is_active:
@@ -2417,6 +2499,7 @@ class PostgreSQLDatabase(DatabaseInterface):
                 'is_active': is_active,
                 'max_uses': max_uses,
                 'current_uses': current_uses,
+                'feature_group': feature_group,
                 'valid': True
             }
 
@@ -2640,7 +2723,7 @@ class PostgreSQLDatabase(DatabaseInterface):
             cursor = conn.cursor()
 
             cursor.execute('''
-                SELECT code, user_type, school_id, is_active, max_uses, current_uses, created_at, created_by
+                SELECT code, user_type, school_id, is_active, max_uses, current_uses, created_at, created_by, feature_group
                 FROM access_codes
                 ORDER BY created_at DESC
             ''')
@@ -2658,7 +2741,8 @@ class PostgreSQLDatabase(DatabaseInterface):
                     'max_uses': row[4],
                     'current_uses': row[5],
                     'created_at': row[6],
-                    'created_by': row[7]
+                    'created_by': row[7],
+                    'feature_group': row[8] or 'full'
                 })
 
             return access_codes
@@ -2667,7 +2751,7 @@ class PostgreSQLDatabase(DatabaseInterface):
             logger.error(f"Error getting access codes: {e}")
             return []
 
-    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None) -> bool:
+    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None, feature_group: str = None) -> bool:
         """Update access code properties"""
         try:
             conn = self._get_connection()
@@ -2683,6 +2767,10 @@ class PostgreSQLDatabase(DatabaseInterface):
             if max_uses is not None:
                 update_fields.append("max_uses = %s")
                 params.append(max_uses)
+
+            if feature_group is not None:
+                update_fields.append("feature_group = %s")
+                params.append(feature_group)
 
             if not update_fields:
                 return False
@@ -3183,6 +3271,58 @@ class PostgreSQLDatabase(DatabaseInterface):
         except Exception as e:
             logger.error(f"Error saving user consent: {e}")
             return False
+
+    def save_emergency_contact(self, user_id: str, name: str, relationship: str, phone: str) -> bool:
+        """Save user's emergency contact information to PostgreSQL"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Update existing consent record with emergency contact
+            cursor.execute('''
+                UPDATE user_consents 
+                SET emergency_contact_name = %s,
+                    emergency_contact_relationship = %s,
+                    emergency_contact_phone = %s,
+                    emergency_contact_submitted = TRUE
+                WHERE user_id = %s
+            ''', (name, relationship, phone, user_id))
+
+            conn.commit()
+            self._return_connection(conn)
+            logger.info(f"Saved emergency contact for user {user_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error saving emergency contact: {e}")
+            return False
+
+    def check_emergency_contact_submitted(self, user_id: str) -> bool:
+        """Check if user has submitted emergency contact from PostgreSQL"""
+        conn = None
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT emergency_contact_submitted
+                FROM user_consents
+                WHERE user_id = %s
+            ''', (user_id,))
+
+            row = cursor.fetchone()
+            cursor.close()
+
+            if row:
+                return bool(row[0])
+            else:
+                return False
+
+        except Exception as e:
+            logger.error(f"Error checking emergency contact submission: {e}")
+            return False
+        finally:
+            self._return_connection(conn)
 
     def update_streak(self, user_id: str, access_code: str) -> bool:
         """Update user's streak for today"""
@@ -3688,9 +3828,9 @@ class DatabaseManager:
         """Get all access codes with their details"""
         return self.database.get_all_access_codes()
 
-    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None) -> bool:
+    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None, feature_group: str = None) -> bool:
         """Update access code properties"""
-        return self.database.update_access_code(code, is_active, max_uses)
+        return self.database.update_access_code(code, is_active, max_uses, feature_group)
 
     def delete_access_code(self, code: str) -> bool:
         """Delete an access code (soft delete by setting inactive)"""
@@ -3759,6 +3899,14 @@ class DatabaseManager:
     def save_user_consent(self, user_id: str, access_code: str, consent_accepted: bool) -> bool:
         """Save user's consent decision"""
         return self.database.save_user_consent(user_id, access_code, consent_accepted)
+
+    def save_emergency_contact(self, user_id: str, name: str, relationship: str, phone: str) -> bool:
+        """Save user's emergency contact information"""
+        return self.database.save_emergency_contact(user_id, name, relationship, phone)
+
+    def check_emergency_contact_submitted(self, user_id: str) -> bool:
+        """Check if user has submitted emergency contact"""
+        return self.database.check_emergency_contact_submitted(user_id)
 
     def update_streak(self, user_id: str, access_code: str) -> bool:
         """Update user's streak for today"""
