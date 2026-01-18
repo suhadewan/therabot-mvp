@@ -57,6 +57,7 @@
         .dark {
             --background: #0a0a0a;
             --background-secondary: #141414;
+            --chat-area-bg: #1a1a2e;
             --foreground: #f5f5f5;
             --card: #141414;
             --card-foreground: #f5f5f5;
@@ -309,7 +310,7 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: var(--card);
+            background: var(--chat-area-bg, var(--card));
             border-radius: 20px 20px 0 0;
             box-shadow: 0 -10px 30px var(--shadow-color);
             height: calc(100vh - 150px);
@@ -320,7 +321,7 @@
 
         .hotlines-sidebar {
             width: 300px;
-            background: var(--background-secondary);
+            background: var(--chat-area-bg, var(--background-secondary));
             border-radius: 20px;
             padding: 1rem;
             box-shadow: 0 4px 20px var(--shadow-color);
