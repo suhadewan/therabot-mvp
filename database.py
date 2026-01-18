@@ -198,6 +198,11 @@ class DatabaseInterface(ABC):
         pass
 
     @abstractmethod
+    def skip_emergency_contact(self, user_id: str) -> bool:
+        """Mark that user chose to skip emergency contact"""
+        pass
+
+    @abstractmethod
     def update_streak(self, user_id: str, access_code: str) -> bool:
         """Update user's streak for today"""
         pass
@@ -1471,6 +1476,28 @@ class SQLiteDatabase(DatabaseInterface):
 
         except Exception as e:
             logger.error(f"Error checking emergency contact submission: {e}")
+            return False
+
+    def skip_emergency_contact(self, user_id: str) -> bool:
+        """Mark that user chose to skip emergency contact in SQLite"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Set emergency_contact_submitted = TRUE but leave contact fields NULL
+            cursor.execute('''
+                UPDATE user_consents
+                SET emergency_contact_submitted = TRUE
+                WHERE user_id = ?
+            ''', (user_id,))
+
+            conn.commit()
+            conn.close()
+            logger.info(f"User {user_id} skipped emergency contact")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error skipping emergency contact: {e}")
             return False
 
     def update_streak(self, user_id: str, access_code: str) -> bool:
@@ -3324,6 +3351,31 @@ class PostgreSQLDatabase(DatabaseInterface):
         finally:
             self._return_connection(conn)
 
+    def skip_emergency_contact(self, user_id: str) -> bool:
+        """Mark that user chose to skip emergency contact in PostgreSQL"""
+        conn = None
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Set emergency_contact_submitted = TRUE but leave contact fields NULL
+            cursor.execute('''
+                UPDATE user_consents
+                SET emergency_contact_submitted = TRUE
+                WHERE user_id = %s
+            ''', (user_id,))
+
+            conn.commit()
+            cursor.close()
+            logger.info(f"User {user_id} skipped emergency contact")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error skipping emergency contact: {e}")
+            return False
+        finally:
+            self._return_connection(conn)
+
     def update_streak(self, user_id: str, access_code: str) -> bool:
         """Update user's streak for today"""
         try:
@@ -3907,6 +3959,10 @@ class DatabaseManager:
     def check_emergency_contact_submitted(self, user_id: str) -> bool:
         """Check if user has submitted emergency contact"""
         return self.database.check_emergency_contact_submitted(user_id)
+
+    def skip_emergency_contact(self, user_id: str) -> bool:
+        """Mark that user chose to skip emergency contact"""
+        return self.database.skip_emergency_contact(user_id)
 
     def update_streak(self, user_id: str, access_code: str) -> bool:
         """Update user's streak for today"""

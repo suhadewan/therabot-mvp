@@ -596,7 +596,20 @@ def consent():
 
 @app.route('/emergency-contact')
 def emergency_contact():
-    """Serve the emergency contact page"""
+    """Serve the emergency contact page - requires authentication"""
+    # Check if user has Flask session (they must be logged in)
+    user_id = session.get('user_id')
+    if not user_id:
+        # Not logged in, redirect to login
+        return redirect(url_for('login'))
+
+    # Check if user has consented first
+    db = get_database()
+    has_consented = db.check_user_consent(user_id)
+    if not has_consented:
+        # Must consent before emergency contact
+        return redirect(url_for('consent'))
+
     return render_template('emergency_contact.html')
 
 @app.route('/admin-login')
@@ -1220,6 +1233,31 @@ def check_emergency_contact():
 
     except Exception as e:
         logger.error(f"Error checking emergency contact: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/emergency-contact/skip', methods=['POST'])
+def skip_emergency_contact():
+    """Record that user chose to skip emergency contact"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', '').strip()
+
+        if not user_id:
+            return jsonify({"error": "User ID is required"}), 400
+
+        db = get_database()
+        success = db.skip_emergency_contact(user_id)
+
+        if success:
+            logger.info(f"User {user_id} skipped emergency contact")
+            return jsonify({"success": True, "message": "Emergency contact skipped"})
+        else:
+            return jsonify({"error": "Failed to record skip"}), 500
+
+    except Exception as e:
+        logger.error(f"Error skipping emergency contact: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": "Internal server error"}), 500
 
 @app.route('/api/admin/login', methods=['POST'])
