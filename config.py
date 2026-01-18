@@ -13,8 +13,8 @@ class Config:
     )
 
     # AI Model Configuration
-    MODEL_NAME = os.getenv("THERABOT_MODEL_NAME", "gpt-4o-mini")
-    # MODEL_NAME = os.getenv("THERABOT_MODEL_NAME", "ft:gpt-4o-mini-2024-07-18:personal:mindmitra2:CUWHRT6Y")
+    # MODEL_NAME = os.getenv("THERABOT_MODEL_NAME", "gpt-4o-mini")
+    MODEL_NAME = os.getenv("THERABOT_MODEL_NAME", "ft:gpt-4o-mini-2024-07-18:personal:mindmitra:CzDQPAeV")
                         #    "ft:gpt-4o-mini-2024-07-18:personal:mindmitra:CG4e85Er")
     MODEL_TEMPERATURE = float(
         os.getenv("THERABOT_MODEL_TEMPERATURE", 0.7)
@@ -75,7 +75,7 @@ class Config:
     # File Paths
     SYSTEM_PROMPT_FILE = os.getenv(
         "THERABOT_SYSTEM_PROMPT_FILE",
-        "system_prompt.txt"
+        "system_prompt_v2.txt"
     )
 
     # Moderation
