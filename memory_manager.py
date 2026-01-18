@@ -273,33 +273,36 @@ Keep each section concise and actionable. Focus on information that would help p
             logger.error(f"Error getting long-term memory: {e}")
             return ""
     
-    def should_generate_summary(self, user_id: str, message_count: int = 10) -> bool:
+    def should_generate_summary(self, user_id: str, message_count: int) -> bool:
         """
         Determine if a summary should be generated (using IST timezone)
-        
+
         Args:
             user_id: User identifier
             message_count: Number of messages in current session
-        
+
         Returns:
             True if summary should be generated
         """
+        MIN_MESSAGES_FOR_SUMMARY = 10
+
         try:
             # Get today's date in IST
             today_ist = get_india_today()
             summaries = self.db.get_conversation_summaries(user_id, days=1)
-            
+
             # Check if summary already exists for today
+            # Convert to string for comparison (DB may return date object)
             has_todays_summary = any(
-                s.get('summary_date') == today_ist 
+                str(s.get('summary_date')) == today_ist
                 for s in summaries
             )
-            
+
             # Generate summary if:
             # 1. Haven't generated one today (IST) AND
             # 2. Have at least 10 messages in conversation
-            return (not has_todays_summary) and (message_count >= message_count)
-            
+            return (not has_todays_summary) and (message_count >= MIN_MESSAGES_FOR_SUMMARY)
+
         except Exception as e:
             logger.error(f"Error checking summary status: {e}")
             return False
