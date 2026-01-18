@@ -236,9 +236,7 @@ def get_crisis_response(flag_type: str = "SI") -> str:
     Return the crisis intervention response based on flag type.
     """
     if flag_type == "SI":
-        return """🚨 **Suicidal Ideation Detected**
-
-Outlive Chat is a safe space to find peer support and tools to help manage difficult feelings and thoughts of ending your life. Please don't hesitate to reach out—support is just a text away:
+        return """Outlive Chat is a safe space to find peer support and tools to help manage difficult feelings and thoughts of ending your life. Please don't hesitate to reach out—support is just a text away:
 
 👉 https://chat.outlive.in/landing-page
 ☎️ More helpline numbers at: https://www.aasra.info/helpline.html
@@ -246,9 +244,7 @@ Outlive Chat is a safe space to find peer support and tools to help manage diffi
 You're not alone, and there are people who want to help you through this difficult time."""
 
     elif flag_type == "SH":
-        return """🩹 **Self-Harm Concerns Detected**
-
-If you're struggling with self-harm urges, please reach out for support:
+        return """If you're struggling with these urges, please reach out for support:
 
 • **Kiran Mental Health Helpline**: 1800-599-0019
 • **AASRA**: 022 2754 6669
@@ -257,9 +253,7 @@ If you're struggling with self-harm urges, please reach out for support:
 Self-harm is a sign that you're struggling with difficult emotions. Professional support can help you find healthier coping strategies."""
 
     elif flag_type == "HI":
-        return """⚠️ **Safety Concern Detected**
-
-If you're having thoughts about hurting others, it's important to seek immediate professional help:
+        return """If you're having thoughts about hurting others, it's important to seek immediate professional help:
 
 • **Police**: 100
 • **Mental Health Crisis Line**: 1800-599-0019
@@ -268,9 +262,7 @@ If you're having thoughts about hurting others, it's important to seek immediate
 These feelings can be addressed with proper support. Please reach out to a mental health professional right away."""
 
     else:  # Default fallback
-        return """🚨 **Crisis Support Available**
-
-If you're in immediate danger, please contact emergency services:
+        return """If you're in immediate danger, please contact emergency services:
 
 • **Emergency Services**: 112
 • **Mental Health Helpline**: 1800-599-0019
@@ -282,11 +274,9 @@ def get_abuse_response(flag_type: str = "EA") -> str:
     """
     Return the abuse intervention response based on flag type.
     """
-    return """🛡️ **Abuse Concern Detected**
+    return """AASRA – We're Here To Help. 💛
 
-AASRA – We're Here To Help. 💛
-
-If you're feeling unsafe or experiencing abuse, please reach out:
+If you're feeling unsafe, please reach out:
 
 • **AASRA**: 022 2754 6669
 • **Women Helpline**: 1091

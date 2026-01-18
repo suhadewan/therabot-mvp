@@ -194,10 +194,11 @@ def run_moderation_check_background(user_id: str, access_code: str, message_text
         traceback.print_exc()
 
 
-def process_message(user_id: str, message_text: str, ip_address: str = None, user_agent: str = None) -> Dict[str, Any]:
+def process_message(user_id: str, message_text: str, ip_address: str = None, user_agent: str = None, feature_group: str = 'full') -> Dict[str, Any]:
     """
     Process incoming message using existing chatbot logic.
     Returns response data for the frontend.
+    feature_group: 'full' or 'basic' - controls which features are enabled
     """
     import time
     start_time = time.time()
@@ -254,20 +255,21 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
     try:
         db.save_chat_message(user_id, access_code, "user", message_text)
         log_timing("User message saved")
-        
-        # Update streak in background thread (non-blocking)
-        # Each message increments message_count for today
-        def update_streak_background():
-            try:
-                db = get_database()
-                db.update_streak(user_id, access_code)
-                print(f"DEBUG: Streak message count incremented for user {user_id}")
-            except Exception as e:
-                print(f"Error updating streak in background: {e}")
 
-        streak_thread = threading.Thread(target=update_streak_background, daemon=True)
-        streak_thread.start()
-        
+        # Update streak in background thread (non-blocking) - ONLY for full feature group
+        # Basic users don't have streak tracking to reduce DB operations
+        if feature_group == 'full':
+            def update_streak_background():
+                try:
+                    db = get_database()
+                    db.update_streak(user_id, access_code)
+                    print(f"DEBUG: Streak message count incremented for user {user_id}")
+                except Exception as e:
+                    print(f"Error updating streak in background: {e}")
+
+            streak_thread = threading.Thread(target=update_streak_background, daemon=True)
+            streak_thread.start()
+
     except Exception as e:
         print(f"Error saving user message: {e}")
     
@@ -378,14 +380,21 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
     
     # Add user message to session
     user_sessions[user_id]['messages'].append({"role": "user", "content": message_text})
-    
-    # Get long-term memory context (summaries from previous sessions)
-    mem_manager = get_memory_manager()
-    mem_start = time.time()
-    long_term_context = mem_manager.get_long_term_memory(user_id, days=7)
-    mem_time = time.time() - mem_start
-    logger.info(f"🧠 MEMORY QUERY TIME: {mem_time:.2f}s")
-    log_timing("Long-term memory loaded")
+
+    # Get long-term memory context (cached per session to avoid repeated DB queries)
+    # Only fetch once per session, not on every message
+    if 'long_term_context' not in user_sessions[user_id]:
+        mem_manager = get_memory_manager()
+        mem_start = time.time()
+        long_term_context = mem_manager.get_long_term_memory(user_id, days=7)
+        mem_time = time.time() - mem_start
+        logger.info(f"🧠 MEMORY QUERY TIME: {mem_time:.2f}s (first message, caching)")
+        user_sessions[user_id]['long_term_context'] = long_term_context
+        log_timing("Long-term memory loaded (fresh)")
+    else:
+        long_term_context = user_sessions[user_id]['long_term_context']
+        logger.info(f"🧠 MEMORY: Using cached context (0.00s)")
+        log_timing("Long-term memory loaded (cached)")
     
     # Build system prompt with long-term memory
     system_prompt = load_system_prompt()
@@ -436,7 +445,7 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
             full_response = completion.choices[0].message.content
         
         # Apply guardrails (set to False to save ~1.4s, you already have crisis detection + moderation)
-        ENABLE_GUARDRAILS = True  # Set to True to enable guardrails check
+        ENABLE_GUARDRAILS = False  # Set to True to enable guardrails check
         if ENABLE_GUARDRAILS:
             final_response = regenerate_if_needed(full_response, messages, openai_client)
             log_timing("Guardrails applied")
@@ -664,8 +673,11 @@ def chat():
         ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
         user_agent = request.headers.get('User-Agent', 'Unknown')
 
+        # Get feature group from session (defaults to 'full' for backwards compatibility)
+        feature_group = session.get('feature_group', 'full')
+
         # Process message
-        result = process_message(user_id, message, ip_address, user_agent)
+        result = process_message(user_id, message, ip_address, user_agent, feature_group)
 
         return jsonify(result)
 
@@ -968,6 +980,7 @@ def auth_login():
         session['user_id'] = access_code
         session['access_code'] = access_code
         session['login_id'] = access_code
+        session['feature_group'] = code_validation.get('feature_group', 'full')
 
         # Check consent status
         has_consented = db.check_user_consent(access_code)
@@ -1005,19 +1018,20 @@ def validate_session():
         code_validation = db.validate_access_code(login_id)
 
         if code_validation.get('valid'):
+            # Get feature group for A/B testing
+            feature_group = code_validation.get('feature_group', 'full')
+
             # Set Flask session
             session['user_id'] = login_id
             session['access_code'] = login_id
             session['login_id'] = login_id
+            session['feature_group'] = feature_group
 
             # Check consent status
             has_consented = db.check_user_consent(login_id)
-            
+
             # Check emergency contact status
             has_emergency_contact = db.check_emergency_contact_submitted(login_id)
-
-            # Get feature group for A/B testing
-            feature_group = code_validation.get('feature_group', 'full')
             
             return jsonify({
                 "valid": True,
@@ -1067,12 +1081,14 @@ def init_app():
                 "restricted": code_validation.get('restricted', False)
             }), 401
 
+        # Get feature group for A/B testing
+        feature_group = code_validation.get('feature_group', 'full')
+
         # Set Flask session
         session['user_id'] = login_id
         session['access_code'] = login_id
         session['login_id'] = login_id
-
-        feature_group = code_validation.get('feature_group', 'full')
+        session['feature_group'] = feature_group
 
         # 2. Get consent and emergency contact status
         has_consented = db.check_user_consent(login_id)
