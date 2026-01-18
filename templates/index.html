@@ -2141,9 +2141,9 @@
             calendar.innerHTML = '';
 
             const days = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
-            
-            // Use local date without timezone conversion
-            const today = new Date();
+
+            // Use IST timezone (same as backend) to determine "today"
+            const today = getISTDate();
             const todayStr = formatDateLocal(today);
             
             // Get current week from Monday to Sunday
@@ -2210,7 +2210,17 @@
             });
         }
 
-        // Helper function to format date as YYYY-MM-DD in local timezone
+        // Helper function to get current date in IST (India Standard Time)
+        function getISTDate() {
+            const now = new Date();
+            // Convert to IST (UTC+5:30)
+            const istOffset = 5.5 * 60; // IST is UTC+5:30 in minutes
+            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+            const istTime = new Date(utc + (istOffset * 60000));
+            return istTime;
+        }
+
+        // Helper function to format date as YYYY-MM-DD
         function formatDateLocal(date) {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
