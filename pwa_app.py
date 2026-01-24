@@ -1614,6 +1614,27 @@ def get_freeze_status(user_id):
         traceback.print_exc()
         return jsonify({"error": "Internal server error"}), 500
 
+@app.route('/api/badges/<user_id>')
+def get_badges(user_id):
+    """Get user's badge data including progress toward earning badges"""
+    try:
+        if not user_id:
+            return jsonify({"error": "User ID is required"}), 400
+
+        db = get_database()
+        badge_data = db.get_badge_data(user_id)
+
+        return jsonify({
+            "success": True,
+            "badge_data": badge_data
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting badge data: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error"}), 500
+
 @app.route('/admin/feelings')
 def admin_feelings():
     """Admin endpoint to view all feelings data"""

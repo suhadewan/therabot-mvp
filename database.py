@@ -223,6 +223,11 @@ class DatabaseInterface(ABC):
         pass
 
     @abstractmethod
+    def get_badge_data(self, user_id: str) -> Dict[str, Any]:
+        """Get user's badge data including total messaging days"""
+        pass
+
+    @abstractmethod
     def get_users_list(self) -> List[Dict[str, Any]]:
         """Get list of all users with their message counts and activity"""
         pass
@@ -337,10 +342,22 @@ class SQLiteDatabase(DatabaseInterface):
                     last_active DATETIME DEFAULT CURRENT_TIMESTAMP,
                     total_messages INTEGER DEFAULT 0,
                     is_active BOOLEAN DEFAULT TRUE,
+                    badge_15_days_earned BOOLEAN DEFAULT FALSE,
+                    badge_15_days_earned_at DATETIME,
                     FOREIGN KEY (access_code) REFERENCES access_codes (code)
                 )
             ''')
-            
+
+            # Migration: Add badge columns to existing user_accounts table
+            try:
+                cursor.execute('ALTER TABLE user_accounts ADD COLUMN badge_15_days_earned BOOLEAN DEFAULT FALSE')
+            except:
+                pass  # Column already exists
+            try:
+                cursor.execute('ALTER TABLE user_accounts ADD COLUMN badge_15_days_earned_at DATETIME')
+            except:
+                pass  # Column already exists
+
             # Create admin users table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS admin_users (
@@ -1578,6 +1595,9 @@ class SQLiteDatabase(DatabaseInterface):
             activity_dates = [datetime.fromisoformat(record[0]).date() for record in activity_records
                             if record[1] >= 5 or record[2]]  # message_count >= 5 OR is_freeze
             frozen_days_set = {datetime.fromisoformat(record[0]).date() for record in activity_records if record[2]}
+            # Also count all messaging days (any message count > 0) for badges
+            all_messaging_dates = [datetime.fromisoformat(record[0]).date() for record in activity_records
+                                   if record[1] > 0]
             
             # Check if they have activity today or yesterday (for streak continuation)
             has_activity_today = today in activity_dates
@@ -1615,41 +1635,111 @@ class SQLiteDatabase(DatabaseInterface):
                     temp_streak = 1
             
             longest_streak = max(longest_streak, temp_streak, current_streak)
-            
+
             # Get weekly activity (current week: Monday to Sunday)
             from datetime import timedelta
             weekly_activity = {}
             frozen_days = {}
-            
+
             # Find Monday of current week
             current_day_of_week = today.weekday()  # Monday = 0, Sunday = 6
             monday = today - timedelta(days=current_day_of_week)
-            
+
             # Generate dates for Monday through Sunday of current week
             for i in range(7):
                 day = monday + timedelta(days=i)
                 day_str = day.isoformat()
                 weekly_activity[day_str] = day in activity_dates
                 frozen_days[day_str] = day in frozen_days_set
-            
+
             return {
                 'current_streak': current_streak,
                 'longest_streak': longest_streak,
                 'total_days': len(activity_dates),
+                'total_messaging_days': len(all_messaging_dates),
                 'weekly_activity': weekly_activity,
                 'frozen_days': frozen_days,
                 'has_activity_today': has_activity_today
             }
-            
+
         except Exception as e:
             logger.error(f"Error getting streak data: {e}")
             return {
                 'current_streak': 0,
                 'longest_streak': 0,
                 'total_days': 0,
+                'total_messaging_days': 0,
                 'weekly_activity': {},
                 'frozen_days': {},
                 'has_activity_today': False,
+                'error': str(e)
+            }
+
+    def get_badge_data(self, user_id: str) -> Dict[str, Any]:
+        """Get user's badge data including total messaging days"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Check if badge is already earned in database
+            cursor.execute('''
+                SELECT badge_15_days_earned, badge_15_days_earned_at
+                FROM user_accounts
+                WHERE login_id = ?
+            ''', (user_id,))
+            row = cursor.fetchone()
+            badge_already_earned = row[0] if row else False
+            badge_earned_at = row[1] if row else None
+
+            # Count distinct days where user sent at least 1 message
+            cursor.execute('''
+                SELECT COUNT(DISTINCT activity_date)
+                FROM streak_tracking
+                WHERE user_id = ? AND message_count > 0
+            ''', (user_id,))
+
+            total_messaging_days = cursor.fetchone()[0] or 0
+
+            # If badge not yet marked as earned but user qualifies, mark it now
+            badge_earned = badge_already_earned
+            if not badge_already_earned and total_messaging_days >= 15:
+                cursor.execute('''
+                    UPDATE user_accounts
+                    SET badge_15_days_earned = TRUE, badge_15_days_earned_at = CURRENT_TIMESTAMP
+                    WHERE login_id = ?
+                ''', (user_id,))
+                conn.commit()
+                badge_earned = True
+                badge_earned_at = datetime.now().isoformat()
+
+            conn.close()
+
+            return {
+                'total_messaging_days': total_messaging_days,
+                'badge_earned': badge_earned,
+                'badge_earned_at': badge_earned_at,
+                'badges': {
+                    '15_days': {
+                        'earned': badge_earned,
+                        'progress': min(total_messaging_days, 15),
+                        'target': 15
+                    }
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting badge data: {e}")
+            return {
+                'total_messaging_days': 0,
+                'badge_earned': False,
+                'badge_earned_at': None,
+                'badges': {
+                    '15_days': {
+                        'earned': False,
+                        'progress': 0,
+                        'target': 15
+                    }
+                },
                 'error': str(e)
             }
 
@@ -1659,7 +1749,7 @@ class SQLiteDatabase(DatabaseInterface):
             from datetime import datetime, timedelta
             conn = self._get_connection()
             cursor = conn.cursor()
-            
+
             # Get Monday of current week (in India timezone)
             today = get_india_today()
             current_day_of_week = today.weekday()
@@ -2003,9 +2093,18 @@ class PostgreSQLDatabase(DatabaseInterface):
                     last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     total_messages INTEGER DEFAULT 0,
                     is_active BOOLEAN DEFAULT TRUE,
+                    badge_15_days_earned BOOLEAN DEFAULT FALSE,
+                    badge_15_days_earned_at TIMESTAMP,
                     FOREIGN KEY (access_code) REFERENCES access_codes (code)
                 )
             ''')
+
+            # Migration: Add badge columns to existing user_accounts table
+            try:
+                cursor.execute('ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS badge_15_days_earned BOOLEAN DEFAULT FALSE')
+                cursor.execute('ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS badge_15_days_earned_at TIMESTAMP')
+            except Exception as e:
+                logger.warning(f"Badge column migration note: {e}")
 
             # Admin users table
             cursor.execute('''
@@ -3439,7 +3538,10 @@ class PostgreSQLDatabase(DatabaseInterface):
             activity_dates = [record[0] if isinstance(record[0], datetime) else datetime.fromisoformat(str(record[0])).date()
                             for record in activity_records if record[1] >= 5 or record[2]]  # message_count >= 5 OR is_freeze
             frozen_days_set = {(record[0] if isinstance(record[0], datetime) else datetime.fromisoformat(str(record[0])).date()) for record in activity_records if record[2]}
-            
+            # Also count all messaging days (any message count > 0) for badges
+            all_messaging_dates = [record[0] if isinstance(record[0], datetime) else datetime.fromisoformat(str(record[0])).date()
+                                   for record in activity_records if record[1] > 0]
+
             # Check if they have activity today
             has_activity_today = today in activity_dates
             
@@ -3500,18 +3602,89 @@ class PostgreSQLDatabase(DatabaseInterface):
                 'total_days': len(activity_dates),
                 'weekly_activity': weekly_activity,
                 'frozen_days': frozen_days,
-                'has_activity_today': has_activity_today
+                'has_activity_today': has_activity_today,
+                'total_messaging_days': len(all_messaging_dates)
             }
-            
+
         except Exception as e:
             logger.error(f"Error getting streak data: {e}")
             return {
                 'current_streak': 0,
                 'longest_streak': 0,
                 'total_days': 0,
+                'total_messaging_days': 0,
                 'weekly_activity': {},
                 'frozen_days': {},
                 'has_activity_today': False,
+                'error': str(e)
+            }
+
+    def get_badge_data(self, user_id: str) -> Dict[str, Any]:
+        """Get user's badge data including total messaging days"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Check if badge is already earned in database
+            cursor.execute('''
+                SELECT badge_15_days_earned, badge_15_days_earned_at
+                FROM user_accounts
+                WHERE login_id = %s
+            ''', (user_id,))
+            row = cursor.fetchone()
+            badge_already_earned = row[0] if row else False
+            badge_earned_at = row[1].isoformat() if row and row[1] else None
+
+            # Count distinct days where user sent at least 1 message
+            cursor.execute('''
+                SELECT COUNT(DISTINCT activity_date)
+                FROM streak_tracking
+                WHERE user_id = %s AND message_count > 0
+            ''', (user_id,))
+
+            total_messaging_days = cursor.fetchone()[0] or 0
+
+            # If badge not yet marked as earned but user qualifies, mark it now
+            badge_earned = badge_already_earned
+            if not badge_already_earned and total_messaging_days >= 15:
+                cursor.execute('''
+                    UPDATE user_accounts
+                    SET badge_15_days_earned = TRUE, badge_15_days_earned_at = CURRENT_TIMESTAMP
+                    WHERE login_id = %s
+                ''', (user_id,))
+                conn.commit()
+                badge_earned = True
+                badge_earned_at = datetime.now().isoformat()
+
+            cursor.close()
+            self._return_connection(conn)
+
+            return {
+                'total_messaging_days': total_messaging_days,
+                'badge_earned': badge_earned,
+                'badge_earned_at': badge_earned_at,
+                'badges': {
+                    '15_days': {
+                        'earned': badge_earned,
+                        'progress': min(total_messaging_days, 15),
+                        'target': 15
+                    }
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting badge data: {e}")
+            return {
+                'total_messaging_days': 0,
+                'badge_earned': False,
+                'badge_earned_at': None,
+                'badges': {
+                    '15_days': {
+                        'earned': False,
+                        'progress': 0,
+                        'target': 15
+                    }
+                },
                 'error': str(e)
             }
 
@@ -3521,13 +3694,13 @@ class PostgreSQLDatabase(DatabaseInterface):
             from datetime import datetime, timedelta
             conn = self._get_connection()
             cursor = conn.cursor()
-            
+
             # Get Monday of current week (in India timezone)
             today = get_india_today()
             current_day_of_week = today.weekday()
             monday = today - timedelta(days=current_day_of_week)
             sunday = monday + timedelta(days=6)
-            
+
             # Check how many freezes used this week
             cursor.execute('''
                 SELECT COUNT(*) FROM streak_tracking
@@ -3979,6 +4152,10 @@ class DatabaseManager:
     def get_freeze_status(self, user_id: str) -> Dict[str, Any]:
         """Get information about user's freeze usage this week"""
         return self.database.get_freeze_status(user_id)
+
+    def get_badge_data(self, user_id: str) -> Dict[str, Any]:
+        """Get user's badge data including total messaging days"""
+        return self.database.get_badge_data(user_id)
 
     def track_email_open(self, tracking_id: str, ip_address: str, user_agent: str) -> bool:
         """Track email open event"""
