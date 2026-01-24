@@ -731,6 +731,12 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                box-sizing: border-box;
+            }
+
+            /* Hide streak count number on mobile for compact icon-only display */
+            .streak-header-button #headerStreakCount {
+                display: none;
             }
 
             .feelings-icon,
@@ -796,11 +802,6 @@
             .header p {
                 font-size: 0.8rem;
                 display: none;
-            }
-
-            .streak-header-button {
-                padding: 0.3rem 0.5rem;
-                font-size: 0.8rem;
             }
 
             .logout-button {
@@ -904,17 +905,6 @@
             .header-logo {
                 width: 35px;
                 height: 35px;
-            }
-
-            .streak-header-button {
-                padding: 0.3rem 0.6rem;
-                font-size: 0.8rem;
-                top: 0.75rem;
-                left: 0.75rem;
-            }
-
-            .streak-icon {
-                font-size: 1rem;
             }
 
             .logout-button {
