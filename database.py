@@ -2103,8 +2103,10 @@ class PostgreSQLDatabase(DatabaseInterface):
             try:
                 cursor.execute('ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS badge_15_days_earned BOOLEAN DEFAULT FALSE')
                 cursor.execute('ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS badge_15_days_earned_at TIMESTAMP')
+                conn.commit()
             except Exception as e:
                 logger.warning(f"Badge column migration note: {e}")
+                conn.rollback()
 
             # Admin users table
             cursor.execute('''
@@ -3625,16 +3627,6 @@ class PostgreSQLDatabase(DatabaseInterface):
             conn = self._get_connection()
             cursor = conn.cursor()
 
-            # Check if badge is already earned in database
-            cursor.execute('''
-                SELECT badge_15_days_earned, badge_15_days_earned_at
-                FROM user_accounts
-                WHERE login_id = %s
-            ''', (user_id,))
-            row = cursor.fetchone()
-            badge_already_earned = row[0] if row else False
-            badge_earned_at = row[1].isoformat() if row and row[1] else None
-
             # Count distinct days where user sent at least 1 message
             cursor.execute('''
                 SELECT COUNT(DISTINCT activity_date)
@@ -3644,17 +3636,35 @@ class PostgreSQLDatabase(DatabaseInterface):
 
             total_messaging_days = cursor.fetchone()[0] or 0
 
-            # If badge not yet marked as earned but user qualifies, mark it now
-            badge_earned = badge_already_earned
-            if not badge_already_earned and total_messaging_days >= 15:
+            # Try to check/update badge status in database (may fail if column doesn't exist yet)
+            badge_earned = total_messaging_days >= 15
+            badge_earned_at = None
+
+            try:
                 cursor.execute('''
-                    UPDATE user_accounts
-                    SET badge_15_days_earned = TRUE, badge_15_days_earned_at = CURRENT_TIMESTAMP
+                    SELECT badge_15_days_earned, badge_15_days_earned_at
+                    FROM user_accounts
                     WHERE login_id = %s
                 ''', (user_id,))
-                conn.commit()
-                badge_earned = True
-                badge_earned_at = datetime.now().isoformat()
+                row = cursor.fetchone()
+                if row:
+                    badge_already_earned = row[0] if row[0] is not None else False
+                    badge_earned_at = row[1].isoformat() if row[1] else None
+
+                    # If badge not yet marked as earned but user qualifies, mark it now
+                    if not badge_already_earned and total_messaging_days >= 15:
+                        cursor.execute('''
+                            UPDATE user_accounts
+                            SET badge_15_days_earned = TRUE, badge_15_days_earned_at = CURRENT_TIMESTAMP
+                            WHERE login_id = %s
+                        ''', (user_id,))
+                        conn.commit()
+                        badge_earned_at = datetime.now().isoformat()
+                    elif badge_already_earned:
+                        badge_earned = True
+            except Exception as col_error:
+                # Column doesn't exist yet, just use calculated value
+                logger.warning(f"Badge column not available yet: {col_error}")
 
             cursor.close()
             self._return_connection(conn)
