@@ -685,6 +685,191 @@ def chat():
         logger.error(f"Error in chat endpoint: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/chat/stream', methods=['POST'])
+def chat_stream():
+    """Handle chat messages with streaming response for faster perceived speed"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', 'default')
+        message = data.get('message', '')
+
+        if not message:
+            return jsonify({"error": "Message is required"}), 400
+
+        # Get IP address and user agent
+        ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+        user_agent = request.headers.get('User-Agent', 'Unknown')
+
+        # Get feature group from session
+        feature_group = session.get('feature_group', 'full')
+
+        # user_id IS the access_code (same as process_message)
+        access_code = user_id
+
+        # Initialize session if needed
+        if user_id not in user_sessions:
+            user_sessions[user_id] = {'messages': []}
+
+        # Save user message to database first
+        try:
+            db = get_database()
+            db.save_chat_message(
+                user_id=user_id,
+                access_code=access_code,
+                role="user",
+                content=message,
+                message_type="normal"
+            )
+        except Exception as e:
+            logger.error(f"Error saving user message: {e}")
+
+        # Check for crisis/safety keywords (same as process_message)
+        is_crisis, crisis_response = detect_crisis_keywords(message)
+        if is_crisis:
+            # Determine flag type from response content (same as process_message)
+            flag_type = "SI"  # Default
+            if "Self-Harm" in crisis_response:
+                flag_type = "SH"
+            elif "Safety Concern" in crisis_response:
+                flag_type = "HI"
+            elif "Abuse" in crisis_response:
+                flag_type = "EA"
+
+            # Handle crisis response (non-streaming for safety)
+            try:
+                db = get_database()
+                db.save_chat_message(
+                    user_id=user_id,
+                    access_code=access_code,
+                    role="assistant",
+                    content=crisis_response,
+                    message_type="crisis"
+                )
+                db.log_flagged_chat(
+                    user_id=user_id,
+                    message=message,
+                    flag_type=flag_type,
+                    confidence=0.9,
+                    analysis={"detection_method": "keyword", "response": crisis_response},
+                    access_code=access_code,
+                    ip_address=ip_address,
+                    user_agent=user_agent
+                )
+                db.should_restrict_user(user_id, max_flags=3, days=7)
+            except Exception as e:
+                logger.error(f"Database error in crisis handling: {e}")
+
+            user_sessions[user_id]['messages'].append({"role": "user", "content": message})
+            user_sessions[user_id]['messages'].append({"role": "assistant", "content": crisis_response})
+
+            # Return crisis as SSE with done flag
+            def crisis_stream():
+                yield f"data: {json.dumps({'content': crisis_response, 'type': 'crisis', 'done': True})}\n\n"
+            return Response(crisis_stream(), mimetype='text/event-stream')
+
+        # Add user message to session
+        user_sessions[user_id]['messages'].append({"role": "user", "content": message})
+
+        # Get long-term memory context (cached)
+        if 'long_term_context' not in user_sessions[user_id]:
+            mem_manager = get_memory_manager()
+            long_term_context = mem_manager.get_long_term_memory(user_id, days=7)
+            user_sessions[user_id]['long_term_context'] = long_term_context
+        else:
+            long_term_context = user_sessions[user_id]['long_term_context']
+
+        # Build system prompt
+        system_prompt = load_system_prompt()
+        if long_term_context:
+            system_prompt = f"{system_prompt}\n\n{long_term_context}"
+
+        # Prepare messages for OpenAI
+        messages = [
+            {"role": "system", "content": system_prompt}
+        ] + user_sessions[user_id]['messages']
+
+        def generate():
+            full_response = ""
+            try:
+                # Stream from OpenAI
+                stream = openai_client.chat.completions.create(
+                    model=config.MODEL_NAME,
+                    messages=messages,
+                    temperature=config.MODEL_TEMPERATURE,
+                    max_tokens=config.MODEL_MAX_TOKENS,
+                    stream=True,
+                )
+
+                for chunk in stream:
+                    if chunk.choices[0].delta.content:
+                        content = chunk.choices[0].delta.content
+                        full_response += content
+                        yield f"data: {json.dumps({'content': content, 'done': False})}\n\n"
+
+                # Send done signal
+                yield f"data: {json.dumps({'content': '', 'done': True})}\n\n"
+
+                # Save complete response to database (after streaming is done)
+                try:
+                    db = get_database()
+                    db.save_chat_message(
+                        user_id=user_id,
+                        access_code=access_code,
+                        role="assistant",
+                        content=full_response,
+                        message_type="normal"
+                    )
+                except Exception as e:
+                    logger.error(f"Error saving streamed response: {e}")
+
+                # Add to session
+                user_sessions[user_id]['messages'].append({"role": "assistant", "content": full_response})
+
+                # Background summary generation (same as process_message)
+                def generate_summary_background():
+                    try:
+                        db = get_database()
+                        if hasattr(db.database, '_get_connection'):
+                            conn = db.database._get_connection()
+                            cursor = conn.cursor()
+                            if db.db_type == 'sqlite':
+                                cursor.execute("""
+                                    SELECT COUNT(*) FROM chat_messages
+                                    WHERE user_id = ? AND DATE(timestamp) = DATE('now')
+                                """, (user_id,))
+                            else:
+                                cursor.execute("""
+                                    SELECT COUNT(*) FROM chat_messages
+                                    WHERE user_id = %s AND DATE(timestamp) = CURRENT_DATE
+                                """, (user_id,))
+                            todays_message_count = cursor.fetchone()[0]
+                            if db.db_type != 'sqlite':
+                                db.database._return_connection(conn)
+                            else:
+                                conn.close()
+                        else:
+                            todays_message_count = len(user_sessions[user_id]['messages'])
+
+                        if todays_message_count >= 10:
+                            mem_manager = get_memory_manager()
+                            if mem_manager.should_generate_summary(user_id, todays_message_count):
+                                all_todays_messages = db.get_chat_history(user_id, limit=1000)
+                                mem_manager.generate_daily_summary(user_id, all_todays_messages)
+                    except Exception as e:
+                        logger.error(f"Error in background summary: {e}")
+
+                threading.Thread(target=generate_summary_background, daemon=True).start()
+
+            except Exception as e:
+                logger.error(f"Streaming error: {e}")
+                yield f"data: {json.dumps({'error': str(e), 'done': True})}\n\n"
+
+        return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
+    except Exception as e:
+        logger.error(f"Error in streaming chat endpoint: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/session/<user_id>')
 def get_session(user_id):
     """Get user's chat session - loads recent messages from database"""
@@ -1216,6 +1401,12 @@ def save_emergency_contact():
 
         if not name or not relationship or not phone:
             return jsonify({"error": "All fields are required"}), 400
+
+        # Validate phone number - must be exactly 10 digits
+        import re
+        phone_digits = re.sub(r'\D', '', phone)
+        if len(phone_digits) != 10:
+            return jsonify({"error": "Phone number must be exactly 10 digits"}), 400
 
         db = get_database()
         success = db.save_emergency_contact(user_id, name, relationship, phone)

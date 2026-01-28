@@ -220,7 +220,8 @@
                 
                 <div class="form-group">
                     <label for="contactPhone">Contact No.: <span class="required">*</span></label>
-                    <input type="tel" id="contactPhone" name="contactPhone" placeholder="Enter phone number" required>
+                    <input type="tel" id="contactPhone" name="contactPhone" placeholder="Enter 10-digit phone number" required pattern="[0-9]{10}" maxlength="10" minlength="10">
+                    <small style="color: #737373; font-size: 0.85rem; margin-top: 0.25rem; display: block;">Must be exactly 10 digits</small>
                 </div>
                 
                 <div class="button-group">
@@ -257,6 +258,14 @@
             // Validation
             if (!name || !relationship || !phone) {
                 errorMessage.textContent = 'Please fill in all required fields';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            // Phone number validation - must be exactly 10 digits
+            const phoneDigits = phone.replace(/\D/g, '');
+            if (phoneDigits.length !== 10) {
+                errorMessage.textContent = 'Phone number must be exactly 10 digits';
                 errorMessage.style.display = 'block';
                 return;
             }
