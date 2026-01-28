@@ -3081,6 +3081,7 @@ class PostgreSQLDatabase(DatabaseInterface):
     
     def record_feeling(self, user_id: str, access_code: str, feeling_score: int) -> bool:
         """Record a user's daily feeling score (0-10) in PostgreSQL"""
+        conn = None
         try:
             if not (0 <= feeling_score <= 10):
                 logger.error(f"Invalid feeling score: {feeling_score}. Must be 0-10")
@@ -3098,12 +3099,19 @@ class PostgreSQLDatabase(DatabaseInterface):
             ''', (user_id, access_code, feeling_score))
 
             conn.commit()
+            cursor.close()
             self._return_connection(conn)
             logger.info(f"Feeling recorded: {feeling_score}/10 for user {user_id}")
             return True
 
         except Exception as e:
             logger.error(f"Error recording feeling: {e}")
+            if conn:
+                try:
+                    conn.rollback()
+                    self._return_connection(conn)
+                except:
+                    pass
             return False
 
     def get_feeling_for_today(self, user_id: str) -> Dict[str, Any]:
