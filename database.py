@@ -203,6 +203,11 @@ class DatabaseInterface(ABC):
         pass
 
     @abstractmethod
+    def get_emergency_contact(self, user_id: str) -> Dict[str, Any]:
+        """Get user's emergency contact information"""
+        pass
+
+    @abstractmethod
     def skip_emergency_contact(self, user_id: str) -> bool:
         """Mark that user chose to skip emergency contact"""
         pass
@@ -1548,6 +1553,33 @@ class SQLiteDatabase(DatabaseInterface):
         except Exception as e:
             logger.error(f"Error checking emergency contact submission: {e}")
             return False
+
+    def get_emergency_contact(self, user_id: str) -> Dict[str, Any]:
+        """Get user's emergency contact information from SQLite"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT emergency_contact_name, emergency_contact_relationship, emergency_contact_phone
+                FROM user_consents
+                WHERE user_id = ?
+            ''', (user_id,))
+
+            row = cursor.fetchone()
+            conn.close()
+
+            if row and row[0]:  # Check if name exists (not just skipped)
+                return {
+                    'name': row[0],
+                    'relationship': row[1],
+                    'phone': row[2]
+                }
+            return None
+
+        except Exception as e:
+            logger.error(f"Error getting emergency contact: {e}")
+            return None
 
     def skip_emergency_contact(self, user_id: str) -> bool:
         """Mark that user chose to skip emergency contact in SQLite"""
@@ -3563,6 +3595,36 @@ class PostgreSQLDatabase(DatabaseInterface):
         finally:
             self._return_connection(conn)
 
+    def get_emergency_contact(self, user_id: str) -> Dict[str, Any]:
+        """Get user's emergency contact information from PostgreSQL"""
+        conn = None
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT emergency_contact_name, emergency_contact_relationship, emergency_contact_phone
+                FROM user_consents
+                WHERE user_id = %s
+            ''', (user_id,))
+
+            row = cursor.fetchone()
+            cursor.close()
+
+            if row and row[0]:  # Check if name exists (not just skipped)
+                return {
+                    'name': row[0],
+                    'relationship': row[1],
+                    'phone': row[2]
+                }
+            return None
+
+        except Exception as e:
+            logger.error(f"Error getting emergency contact: {e}")
+            return None
+        finally:
+            self._return_connection(conn)
+
     def skip_emergency_contact(self, user_id: str) -> bool:
         """Mark that user chose to skip emergency contact in PostgreSQL"""
         conn = None
@@ -4257,6 +4319,10 @@ class DatabaseManager:
     def check_emergency_contact_submitted(self, user_id: str) -> bool:
         """Check if user has submitted emergency contact"""
         return self.database.check_emergency_contact_submitted(user_id)
+
+    def get_emergency_contact(self, user_id: str) -> Dict[str, Any]:
+        """Get user's emergency contact information"""
+        return self.database.get_emergency_contact(user_id)
 
     def skip_emergency_contact(self, user_id: str) -> bool:
         """Mark that user chose to skip emergency contact"""
