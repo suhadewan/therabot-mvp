@@ -93,7 +93,7 @@ class DatabaseInterface(ABC):
         pass
 
     @abstractmethod
-    def create_access_code(self, code: str, user_type: str, school_id: str, max_uses: int, created_by: str) -> bool:
+    def create_access_code(self, code: str, user_type: str, school_id: str, max_uses: int, created_by: str, reviewer: int = None) -> bool:
         """Create a new access code"""
         pass
 
@@ -103,8 +103,13 @@ class DatabaseInterface(ABC):
         pass
 
     @abstractmethod
-    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None, feature_group: str = None) -> bool:
+    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None, feature_group: str = None, reviewer: int = None) -> bool:
         """Update access code properties"""
+        pass
+
+    @abstractmethod
+    def get_users_by_reviewer(self, reviewer: int) -> List[Dict[str, Any]]:
+        """Get users assigned to a specific reviewer"""
         pass
 
     @abstractmethod
@@ -864,23 +869,23 @@ class SQLiteDatabase(DatabaseInterface):
             logger.error(f"Error updating admin last login: {e}")
             return False
 
-    def create_access_code(self, code: str, user_type: str, school_id: str, max_uses: int, created_by: str) -> bool:
+    def create_access_code(self, code: str, user_type: str, school_id: str, max_uses: int, created_by: str, reviewer: int = None) -> bool:
         """Create a new access code"""
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
-            
+
             cursor.execute('''
-                INSERT INTO access_codes 
-                (code, user_type, school_id, is_active, max_uses, current_uses, created_at, created_by)
-                VALUES (?, ?, ?, TRUE, ?, 0, CURRENT_TIMESTAMP, ?)
-            ''', (code, user_type, school_id, max_uses, created_by))
-            
+                INSERT INTO access_codes
+                (code, user_type, school_id, is_active, max_uses, current_uses, created_at, created_by, reviewer)
+                VALUES (?, ?, ?, TRUE, ?, 0, CURRENT_TIMESTAMP, ?, ?)
+            ''', (code, user_type, school_id, max_uses, created_by, reviewer if reviewer and reviewer > 0 else None))
+
             conn.commit()
             conn.close()
             logger.info(f"Access code created: {code}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Error creating access code: {e}")
             return False
@@ -890,9 +895,9 @@ class SQLiteDatabase(DatabaseInterface):
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
-            
+
             cursor.execute('''
-                SELECT code, user_type, school_id, is_active, max_uses, current_uses, created_at, created_by, feature_group
+                SELECT code, user_type, school_id, is_active, max_uses, current_uses, created_at, created_by, feature_group, reviewer
                 FROM access_codes
                 ORDER BY created_at DESC
             ''')
@@ -911,16 +916,17 @@ class SQLiteDatabase(DatabaseInterface):
                     'current_uses': row[5],
                     'created_at': row[6],
                     'created_by': row[7],
-                    'feature_group': row[8] or 'full'
+                    'feature_group': row[8] or 'full',
+                    'reviewer': row[9]
                 })
-            
+
             return access_codes
-            
+
         except Exception as e:
             logger.error(f"Error getting access codes: {e}")
             return []
 
-    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None, feature_group: str = None) -> bool:
+    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None, feature_group: str = None, reviewer: int = None) -> bool:
         """Update access code properties"""
         try:
             conn = self._get_connection()
@@ -941,6 +947,10 @@ class SQLiteDatabase(DatabaseInterface):
                 update_fields.append("feature_group = ?")
                 params.append(feature_group)
 
+            if reviewer is not None:
+                update_fields.append("reviewer = ?")
+                params.append(reviewer if reviewer > 0 else None)
+
             if not update_fields:
                 return False
 
@@ -960,6 +970,50 @@ class SQLiteDatabase(DatabaseInterface):
         except Exception as e:
             logger.error(f"Error updating access code: {e}")
             return False
+
+    def get_users_by_reviewer(self, reviewer: int) -> List[Dict[str, Any]]:
+        """Get users assigned to a specific reviewer"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Get users with chat messages assigned to this reviewer
+            cursor.execute('''
+                SELECT
+                    cm.access_code,
+                    ac.user_type,
+                    ac.school_id,
+                    ac.reviewer,
+                    COUNT(cm.id) as message_count,
+                    MAX(cm.timestamp) as last_activity,
+                    MIN(cm.timestamp) as first_activity
+                FROM chat_messages cm
+                INNER JOIN access_codes ac ON cm.access_code = ac.code
+                WHERE ac.reviewer = ?
+                GROUP BY cm.access_code, ac.user_type, ac.school_id, ac.reviewer
+                ORDER BY MAX(cm.timestamp) DESC
+            ''', (reviewer,))
+
+            rows = cursor.fetchall()
+            conn.close()
+
+            users = []
+            for row in rows:
+                users.append({
+                    'access_code': row[0],
+                    'user_type': row[1] or 'Unknown',
+                    'school_id': row[2] or 'N/A',
+                    'reviewer': row[3],
+                    'message_count': row[4],
+                    'last_activity': row[5],
+                    'first_activity': row[6]
+                })
+
+            return users
+
+        except Exception as e:
+            logger.error(f"Error getting users by reviewer: {e}")
+            return []
 
     def delete_access_code(self, code: str) -> bool:
         """Delete an access code (soft delete by setting inactive)"""
@@ -2823,7 +2877,7 @@ class PostgreSQLDatabase(DatabaseInterface):
             logger.error(f"Error updating admin last login: {e}")
             return False
 
-    def create_access_code(self, code: str, user_type: str, school_id: str, max_uses: int, created_by: str) -> bool:
+    def create_access_code(self, code: str, user_type: str, school_id: str, max_uses: int, created_by: str, reviewer: int = None) -> bool:
         """Create a new access code"""
         try:
             conn = self._get_connection()
@@ -2831,9 +2885,9 @@ class PostgreSQLDatabase(DatabaseInterface):
 
             cursor.execute('''
                 INSERT INTO access_codes
-                (code, user_type, school_id, is_active, max_uses, current_uses, created_at, created_by)
-                VALUES (%s, %s, %s, TRUE, %s, 0, CURRENT_TIMESTAMP, %s)
-            ''', (code, user_type, school_id, max_uses, created_by))
+                (code, user_type, school_id, is_active, max_uses, current_uses, created_at, created_by, reviewer)
+                VALUES (%s, %s, %s, TRUE, %s, 0, CURRENT_TIMESTAMP, %s, %s)
+            ''', (code, user_type, school_id, max_uses, created_by, reviewer if reviewer and reviewer > 0 else None))
 
             conn.commit()
             self._return_connection(conn)
@@ -2851,7 +2905,7 @@ class PostgreSQLDatabase(DatabaseInterface):
             cursor = conn.cursor()
 
             cursor.execute('''
-                SELECT code, user_type, school_id, is_active, max_uses, current_uses, created_at, created_by, feature_group
+                SELECT code, user_type, school_id, is_active, max_uses, current_uses, created_at, created_by, feature_group, reviewer
                 FROM access_codes
                 ORDER BY created_at DESC
             ''')
@@ -2870,7 +2924,8 @@ class PostgreSQLDatabase(DatabaseInterface):
                     'current_uses': row[5],
                     'created_at': row[6],
                     'created_by': row[7],
-                    'feature_group': row[8] or 'full'
+                    'feature_group': row[8] or 'full',
+                    'reviewer': row[9]
                 })
 
             return access_codes
@@ -2879,7 +2934,7 @@ class PostgreSQLDatabase(DatabaseInterface):
             logger.error(f"Error getting access codes: {e}")
             return []
 
-    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None, feature_group: str = None) -> bool:
+    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None, feature_group: str = None, reviewer: int = None) -> bool:
         """Update access code properties"""
         try:
             conn = self._get_connection()
@@ -2900,6 +2955,10 @@ class PostgreSQLDatabase(DatabaseInterface):
                 update_fields.append("feature_group = %s")
                 params.append(feature_group)
 
+            if reviewer is not None:
+                update_fields.append("reviewer = %s")
+                params.append(reviewer if reviewer > 0 else None)
+
             if not update_fields:
                 return False
 
@@ -2919,6 +2978,50 @@ class PostgreSQLDatabase(DatabaseInterface):
         except Exception as e:
             logger.error(f"Error updating access code: {e}")
             return False
+
+    def get_users_by_reviewer(self, reviewer: int) -> List[Dict[str, Any]]:
+        """Get users assigned to a specific reviewer"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Get users with chat messages assigned to this reviewer
+            cursor.execute('''
+                SELECT
+                    cm.access_code,
+                    ac.user_type,
+                    ac.school_id,
+                    ac.reviewer,
+                    COUNT(cm.id) as message_count,
+                    MAX(cm.timestamp) as last_activity,
+                    MIN(cm.timestamp) as first_activity
+                FROM chat_messages cm
+                INNER JOIN access_codes ac ON cm.access_code = ac.code
+                WHERE ac.reviewer = %s
+                GROUP BY cm.access_code, ac.user_type, ac.school_id, ac.reviewer
+                ORDER BY MAX(cm.timestamp) DESC
+            ''', (reviewer,))
+
+            rows = cursor.fetchall()
+            self._return_connection(conn)
+
+            users = []
+            for row in rows:
+                users.append({
+                    'access_code': row[0],
+                    'user_type': row[1] or 'Unknown',
+                    'school_id': row[2] or 'N/A',
+                    'reviewer': row[3],
+                    'message_count': row[4],
+                    'last_activity': str(row[5]) if row[5] else None,
+                    'first_activity': str(row[6]) if row[6] else None
+                })
+
+            return users
+
+        except Exception as e:
+            logger.error(f"Error getting users by reviewer: {e}")
+            return []
 
     def delete_access_code(self, code: str) -> bool:
         """Delete an access code (soft delete by setting inactive)"""
@@ -4063,21 +4166,25 @@ class DatabaseManager:
         """Update admin's last login timestamp"""
         return self.database.update_admin_last_login(username)
 
-    def create_access_code(self, code: str, user_type: str, school_id: str, max_uses: int, created_by: str) -> bool:
+    def create_access_code(self, code: str, user_type: str, school_id: str, max_uses: int, created_by: str, reviewer: int = None) -> bool:
         """Create a new access code"""
-        return self.database.create_access_code(code, user_type, school_id, max_uses, created_by)
+        return self.database.create_access_code(code, user_type, school_id, max_uses, created_by, reviewer)
 
     def get_all_access_codes(self) -> List[Dict[str, Any]]:
         """Get all access codes with their details"""
         return self.database.get_all_access_codes()
 
-    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None, feature_group: str = None) -> bool:
+    def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None, feature_group: str = None, reviewer: int = None) -> bool:
         """Update access code properties"""
-        return self.database.update_access_code(code, is_active, max_uses, feature_group)
+        return self.database.update_access_code(code, is_active, max_uses, feature_group, reviewer)
 
     def delete_access_code(self, code: str) -> bool:
         """Delete an access code (soft delete by setting inactive)"""
         return self.database.delete_access_code(code)
+
+    def get_users_by_reviewer(self, reviewer: int) -> List[Dict[str, Any]]:
+        """Get users assigned to a specific reviewer"""
+        return self.database.get_users_by_reviewer(reviewer)
 
     def save_chat_message(self, user_id: str, access_code: str, role: str, content: str,
                          session_id: str = None, message_type: str = "normal") -> bool:

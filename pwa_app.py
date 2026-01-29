@@ -1533,21 +1533,25 @@ def create_access_code():
         school_id = data.get('school_id', '').strip()
         max_uses = int(data.get('max_uses', 1))
         created_by = data.get('created_by', 'admin')
-        
+        reviewer = data.get('reviewer')
+
         if not code or not user_type:
             return jsonify({"error": "Code and user_type are required"}), 400
-        
+
         if max_uses < 1:
             return jsonify({"error": "Max uses must be at least 1"}), 400
-        
+
+        if reviewer is not None and reviewer not in [0, 1, 2, 3, None]:
+            return jsonify({"error": "Reviewer must be 1, 2, 3, or null"}), 400
+
         db = get_database()
-        success = db.create_access_code(code, user_type, school_id, max_uses, created_by)
-        
+        success = db.create_access_code(code, user_type, school_id, max_uses, created_by, reviewer)
+
         if success:
             return jsonify({"success": True, "message": f"Access code {code} created successfully"})
         else:
             return jsonify({"error": "Failed to create access code"}), 500
-            
+
     except Exception as e:
         print(f"Error creating access code: {e}")
         return jsonify({"error": "Internal server error"}), 500
@@ -1560,8 +1564,9 @@ def update_access_code(code):
         is_active = data.get('is_active')
         max_uses = data.get('max_uses')
         feature_group = data.get('feature_group')
+        reviewer = data.get('reviewer')
 
-        if is_active is None and max_uses is None and feature_group is None:
+        if is_active is None and max_uses is None and feature_group is None and reviewer is None:
             return jsonify({"error": "At least one field to update is required"}), 400
 
         if max_uses is not None and max_uses < 1:
@@ -1570,8 +1575,11 @@ def update_access_code(code):
         if feature_group is not None and feature_group not in ['full', 'basic']:
             return jsonify({"error": "Feature group must be 'full' or 'basic'"}), 400
 
+        if reviewer is not None and reviewer not in [0, 1, 2, 3]:
+            return jsonify({"error": "Reviewer must be 1, 2, 3, or 0 (unassigned)"}), 400
+
         db = get_database()
-        success = db.update_access_code(code, is_active, max_uses, feature_group)
+        success = db.update_access_code(code, is_active, max_uses, feature_group, reviewer)
 
         if success:
             return jsonify({"success": True, "message": f"Access code {code} updated successfully"})
@@ -1894,6 +1902,29 @@ def admin_get_users():
 
     except Exception as e:
         logger.error(f"Error getting users list: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/admin/reviewer/<int:reviewer_id>/users')
+def admin_get_users_by_reviewer(reviewer_id):
+    """Admin endpoint to get users assigned to a specific reviewer.
+    Filters out admin/teacher types and test schools (N/A, testcode, PILOT_STUDY).
+    """
+    try:
+        if reviewer_id not in [1, 2, 3]:
+            return jsonify({"error": "Reviewer ID must be 1, 2, or 3"}), 400
+
+        db = get_database()
+        users = db.get_users_by_reviewer(reviewer_id)
+        return jsonify({
+            "reviewer": reviewer_id,
+            "user_count": len(users),
+            "users": users
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting users for reviewer {reviewer_id}: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({"error": "Internal server error"}), 500
