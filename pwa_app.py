@@ -51,6 +51,7 @@ from guardrails import regenerate_if_needed
 from database import init_database, get_database
 from memory_manager import MemoryManager
 from rate_limiter import rate_limit, get_rate_limit_status
+from email_notifications import send_flag_notification_async
 
 # Timezone configuration
 # India Standard Time (IST) for production
@@ -153,6 +154,9 @@ def run_moderation_check_background(user_id: str, access_code: str, message_text
 
             db = get_database()
 
+            # Get emergency contact for email notification
+            emergency_contact = db.get_emergency_contact(user_id)
+
             if crisis_category:
                 # It's a crisis that slipped through keyword detection
                 print(f"DEBUG: Background AI categorized as crisis type: {crisis_category}")
@@ -168,6 +172,9 @@ def run_moderation_check_background(user_id: str, access_code: str, message_text
                     ip_address=ip_address,
                     user_agent=user_agent
                 )
+
+                # Send email notification
+                send_flag_notification_async(access_code, message_text, crisis_category, emergency_contact)
             else:
                 # Not a crisis, just general moderation flag
                 print(f"DEBUG: Background AI categorized as general moderation (not crisis)")
@@ -181,6 +188,9 @@ def run_moderation_check_background(user_id: str, access_code: str, message_text
                     ip_address=ip_address,
                     user_agent=user_agent
                 )
+
+                # Send email notification
+                send_flag_notification_async(access_code, message_text, "moderation", emergency_contact)
 
             # Check if user should be restricted (3 flags in 7 days)
             db.should_restrict_user(user_id, max_flags=3, days=7)
@@ -315,6 +325,10 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
             )
             print(f"DEBUG: Crisis logged with flag: {flag_type}")
 
+            # Send email notification to on-call reviewer
+            emergency_contact = db.get_emergency_contact(user_id)
+            send_flag_notification_async(access_code, message_text, flag_type, emergency_contact)
+
             # Check if user should be restricted (3 flags in 7 days)
             db.should_restrict_user(user_id, max_flags=3, days=7)
         except Exception as e:
@@ -363,6 +377,10 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
                 ip_address=ip_address,
                 user_agent=user_agent
             )
+
+            # Send email notification to on-call reviewer
+            emergency_contact = db.get_emergency_contact(user_id)
+            send_flag_notification_async(access_code, message_text, concern_type, emergency_contact)
 
             # Check if user should be restricted (3 flags in 7 days)
             db.should_restrict_user(user_id, max_flags=3, days=7)
@@ -755,6 +773,11 @@ def chat_stream():
                     ip_address=ip_address,
                     user_agent=user_agent
                 )
+
+                # Send email notification to on-call reviewer
+                emergency_contact = db.get_emergency_contact(user_id)
+                send_flag_notification_async(access_code, message, flag_type, emergency_contact)
+
                 db.should_restrict_user(user_id, max_flags=3, days=7)
             except Exception as e:
                 logger.error(f"Database error in crisis handling: {e}")
