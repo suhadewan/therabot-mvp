@@ -1274,6 +1274,10 @@ def init_app():
     Replaces: validate-session + chat-history + feelings-status + streak
     Optimized for performance with 3000-4000 users.
     """
+    import time
+    timings = {}
+    start_total = time.time()
+
     try:
         data = request.get_json()
         login_id = data.get('login_id', '').strip()
@@ -1283,9 +1287,33 @@ def init_app():
 
         db = get_database()
 
-        # 1. Validate access code
-        code_validation = db.validate_access_code(login_id)
+        # Run ALL DB queries in parallel using threads for better performance
+        from concurrent.futures import ThreadPoolExecutor, as_completed
 
+        t0 = time.time()
+        with ThreadPoolExecutor(max_workers=7) as executor:
+            futures = {
+                executor.submit(db.validate_access_code, login_id): 'validate',
+                executor.submit(db.check_user_consent, login_id): 'consent',
+                executor.submit(db.check_emergency_contact_submitted, login_id): 'emergency',
+                executor.submit(db.get_chat_history, login_id, 50): 'chat_history',
+                executor.submit(db.get_feeling_for_today, login_id): 'feeling',
+                executor.submit(db.get_streak_data, login_id): 'streak',
+            }
+
+            results = {}
+            for future in as_completed(futures):
+                key = futures[future]
+                try:
+                    results[key] = future.result()
+                except Exception as e:
+                    logger.error(f"Error in parallel query {key}: {e}")
+                    results[key] = None
+
+        timings['all_queries_parallel'] = time.time() - t0
+
+        # Check validation result
+        code_validation = results.get('validate', {})
         if not code_validation.get('valid'):
             return jsonify({
                 "valid": False,
@@ -1302,21 +1330,16 @@ def init_app():
         session['login_id'] = login_id
         session['feature_group'] = feature_group
 
-        # 2. Get consent and emergency contact status
-        has_consented = db.check_user_consent(login_id)
-        has_emergency_contact = db.check_emergency_contact_submitted(login_id)
+        has_consented = results.get('consent', False)
+        has_emergency_contact = results.get('emergency', False)
+        chat_history = results.get('chat_history', [])
+        feeling_status = results.get('feeling')
+        streak_data = results.get('streak') if feature_group == 'full' else None
 
-        # 3. Get chat history (limit to 50 for performance)
-        chat_history = db.get_chat_history(login_id, limit=50)
         messages = [{"role": msg['role'], "content": msg['content'], "timestamp": msg.get('timestamp')} for msg in chat_history]
 
-        # 4. Get feelings status for today
-        feeling_status = db.get_feeling_for_today(login_id)
-
-        # 5. Get streak data (only if full access to avoid unnecessary DB call)
-        streak_data = None
-        if feature_group == 'full':
-            streak_data = db.get_streak_data(login_id)
+        timings['total'] = time.time() - start_total
+        logger.info(f"API /api/init timings for {login_id}: {timings}")
 
         return jsonify({
             "valid": True,
