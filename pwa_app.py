@@ -95,6 +95,35 @@ if os.getenv('ENVIRONMENT') == 'production':
 import openai
 openai_client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
+# Model warmup to prevent cold start latency
+def warmup_model():
+    """
+    Send a lightweight request to the fine-tuned model to keep it warm.
+    Fine-tuned models have cold start latency of 10-30s when not used recently.
+    """
+    try:
+        logger.info("🔥 Warming up fine-tuned model...")
+        response = openai_client.chat.completions.create(
+            model=config.MODEL_NAME,
+            messages=[{"role": "user", "content": "Hi"}],
+            max_tokens=5,
+            temperature=0
+        )
+        logger.info(f"✅ Model warmup complete")
+        return True
+    except Exception as e:
+        logger.warning(f"Model warmup failed (non-critical): {e}")
+        return False
+
+# Warmup model on server start (in background to not block startup)
+def background_warmup():
+    import time
+    time.sleep(2)  # Wait for server to be ready
+    warmup_model()
+
+warmup_thread = threading.Thread(target=background_warmup, daemon=True)
+warmup_thread.start()
+
 # Initialize database at module load time (works with both gunicorn and python pwa_app.py)
 logger.info("Initializing database...")
 db_type = os.getenv('DATABASE_TYPE', 'sqlite')
@@ -232,9 +261,9 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
         print(f"DEBUG: Using cached session with {len(session_messages)} messages for user {user_id}")
     else:
         # Load recent chat history from database
-        # Reduced from 100 to 20 for faster response times
+        # Reduced to 10 for faster OpenAI response times (fewer input tokens)
         try:
-            chat_history = db.get_chat_history(user_id, limit=20)  # Get recent messages
+            chat_history = db.get_chat_history(user_id, limit=10)  # Get recent messages
             log_timing("Chat history loaded")
 
             # Load all recent messages (no timezone filtering)
@@ -406,27 +435,34 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
         mem_manager = get_memory_manager()
         mem_start = time.time()
         long_term_context = mem_manager.get_long_term_memory(user_id, days=7)
+        user_insights_context = mem_manager.get_user_insights_context(user_id)
         mem_time = time.time() - mem_start
         logger.info(f"🧠 MEMORY QUERY TIME: {mem_time:.2f}s (first message, caching)")
         user_sessions[user_id]['long_term_context'] = long_term_context
+        user_sessions[user_id]['user_insights_context'] = user_insights_context
         log_timing("Long-term memory loaded (fresh)")
     else:
         long_term_context = user_sessions[user_id]['long_term_context']
+        user_insights_context = user_sessions[user_id].get('user_insights_context', '')
         logger.info(f"🧠 MEMORY: Using cached context (0.00s)")
         log_timing("Long-term memory loaded (cached)")
-    
-    # Build system prompt with long-term memory
+
+    # Build system prompt with long-term memory and user insights
     system_prompt = load_system_prompt()
+    if user_insights_context:
+        system_prompt = f"{system_prompt}\n\n{user_insights_context}"
+        print(f"DEBUG: Added user insights context for user {user_id}")
     if long_term_context:
         system_prompt = f"{system_prompt}\n\n{long_term_context}"
         print(f"DEBUG: Added long-term memory context for user {user_id}")
     
     # Prepare messages for OpenAI
-    # Short-term memory: Last 20 messages from current/recent sessions
+    # Short-term memory: Last 10 messages (reduced for faster API response)
     # Long-term memory: Included in system prompt above
+    recent_messages = user_sessions[user_id]['messages'][-10:]  # Cap at 10 messages
     messages = [
         {"role": "system", "content": system_prompt}
-    ] + user_sessions[user_id]['messages']
+    ] + recent_messages
 
     print(f"DEBUG: Sending {len(messages)} messages to OpenAI for user {user_id}")
     log_timing("Messages prepared for OpenAI")
@@ -544,6 +580,14 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
                             messages=messages_for_summary
                         )
                         logger.info(f"✅ SUMMARY: Summary saved successfully for {user_id}!")
+
+                        # Also extract/update user insights (non-PII facts)
+                        mem_manager.extract_user_insights(
+                            user_id=user_id,
+                            access_code=access_code,
+                            messages=messages_for_summary
+                        )
+                        logger.info(f"✅ INSIGHTS: User insights updated for {user_id}!")
                     else:
                         logger.info(f"⏭️  SUMMARY: Summary already exists for today, skipping")
                 else:
@@ -960,6 +1004,25 @@ def health():
             "type": db_type
         },
         "environment": os.getenv("ENVIRONMENT", "development")
+    })
+
+@app.route('/health/warmup')
+def health_warmup():
+    """
+    Health check that also warms up the fine-tuned model.
+    Call this endpoint every 5-10 minutes to prevent cold starts.
+    """
+    import time
+    start = time.time()
+
+    # Warmup the model
+    model_warmed = warmup_model()
+    warmup_time = time.time() - start
+
+    return jsonify({
+        "status": "healthy",
+        "model_warmed": model_warmed,
+        "warmup_time_seconds": round(warmup_time, 2)
     })
 
 @app.route('/track/open/<tracking_id>')
