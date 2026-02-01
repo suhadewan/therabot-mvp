@@ -173,6 +173,19 @@ class DatabaseInterface(ABC):
         pass
 
     @abstractmethod
+    def save_user_insights(self, user_id: str, access_code: str,
+                          life_situation: str = None, emotional_triggers: str = None,
+                          coping_that_helps: str = None, interests_hobbies: str = None,
+                          support_system: str = None, goals_aspirations: str = None) -> bool:
+        """Save or update user insights (non-PII facts about user)"""
+        pass
+
+    @abstractmethod
+    def get_user_insights(self, user_id: str) -> Dict[str, Any]:
+        """Get user insights for a user"""
+        pass
+
+    @abstractmethod
     def check_user_consent(self, user_id: str) -> bool:
         """Check if user has given consent"""
         pass
@@ -410,6 +423,24 @@ class SQLiteDatabase(DatabaseInterface):
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(user_id, summary_date),
+                    FOREIGN KEY (access_code) REFERENCES access_codes (code)
+                )
+            ''')
+
+            # Create user insights table for non-PII facts about users
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS user_insights (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL UNIQUE,
+                    access_code TEXT NOT NULL,
+                    life_situation TEXT,
+                    emotional_triggers TEXT,
+                    coping_that_helps TEXT,
+                    interests_hobbies TEXT,
+                    support_system TEXT,
+                    goals_aspirations TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (access_code) REFERENCES access_codes (code)
                 )
             ''')
@@ -1393,6 +1424,97 @@ class SQLiteDatabase(DatabaseInterface):
             logger.error(f"Error getting latest summary: {e}")
             return {}
 
+    def save_user_insights(self, user_id: str, access_code: str,
+                          life_situation: str = None, emotional_triggers: str = None,
+                          coping_that_helps: str = None, interests_hobbies: str = None,
+                          support_system: str = None, goals_aspirations: str = None) -> bool:
+        """Save or update user insights in SQLite"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Check if insights exist for this user
+            cursor.execute('SELECT id FROM user_insights WHERE user_id = ?', (user_id,))
+            existing = cursor.fetchone()
+
+            if existing:
+                # Update existing - only update non-None fields
+                updates = []
+                params = []
+                if life_situation is not None:
+                    updates.append('life_situation = ?')
+                    params.append(life_situation)
+                if emotional_triggers is not None:
+                    updates.append('emotional_triggers = ?')
+                    params.append(emotional_triggers)
+                if coping_that_helps is not None:
+                    updates.append('coping_that_helps = ?')
+                    params.append(coping_that_helps)
+                if interests_hobbies is not None:
+                    updates.append('interests_hobbies = ?')
+                    params.append(interests_hobbies)
+                if support_system is not None:
+                    updates.append('support_system = ?')
+                    params.append(support_system)
+                if goals_aspirations is not None:
+                    updates.append('goals_aspirations = ?')
+                    params.append(goals_aspirations)
+
+                if updates:
+                    updates.append('updated_at = CURRENT_TIMESTAMP')
+                    params.append(user_id)
+                    cursor.execute(f'''
+                        UPDATE user_insights SET {', '.join(updates)}
+                        WHERE user_id = ?
+                    ''', params)
+            else:
+                # Insert new
+                cursor.execute('''
+                    INSERT INTO user_insights (user_id, access_code, life_situation,
+                        emotional_triggers, coping_that_helps, interests_hobbies,
+                        support_system, goals_aspirations)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (user_id, access_code, life_situation, emotional_triggers,
+                      coping_that_helps, interests_hobbies, support_system, goals_aspirations))
+
+            conn.commit()
+            conn.close()
+            return True
+
+        except Exception as e:
+            logger.error(f"Error saving user insights: {e}")
+            return False
+
+    def get_user_insights(self, user_id: str) -> Dict[str, Any]:
+        """Get user insights from SQLite"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT life_situation, emotional_triggers, coping_that_helps,
+                       interests_hobbies, support_system, goals_aspirations
+                FROM user_insights WHERE user_id = ?
+            ''', (user_id,))
+
+            row = cursor.fetchone()
+            conn.close()
+
+            if row:
+                return {
+                    'life_situation': row[0],
+                    'emotional_triggers': row[1],
+                    'coping_that_helps': row[2],
+                    'interests_hobbies': row[3],
+                    'support_system': row[4],
+                    'goals_aspirations': row[5]
+                }
+            return {}
+
+        except Exception as e:
+            logger.error(f"Error getting user insights: {e}")
+            return {}
+
     def check_user_consent(self, user_id: str) -> bool:
         """Check if user has given consent from SQLite - user_id is now the access_code"""
         try:
@@ -2276,6 +2398,24 @@ class PostgreSQLDatabase(DatabaseInterface):
                 )
             ''')
 
+            # User insights table for non-PII facts about users
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS user_insights (
+                    id SERIAL PRIMARY KEY,
+                    user_id TEXT NOT NULL UNIQUE,
+                    access_code TEXT NOT NULL,
+                    life_situation TEXT,
+                    emotional_triggers TEXT,
+                    coping_that_helps TEXT,
+                    interests_hobbies TEXT,
+                    support_system TEXT,
+                    goals_aspirations TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (access_code) REFERENCES access_codes (code)
+                )
+            ''')
+
             # User consents table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS user_consents (
@@ -2492,6 +2632,24 @@ class PostgreSQLDatabase(DatabaseInterface):
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(user_id, summary_date),
+                    FOREIGN KEY (access_code) REFERENCES access_codes (code)
+                )
+            ''')
+
+            # Create user insights table for non-PII facts about users
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS user_insights (
+                    id SERIAL PRIMARY KEY,
+                    user_id TEXT NOT NULL UNIQUE,
+                    access_code TEXT NOT NULL,
+                    life_situation TEXT,
+                    emotional_triggers TEXT,
+                    coping_that_helps TEXT,
+                    interests_hobbies TEXT,
+                    support_system TEXT,
+                    goals_aspirations TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (access_code) REFERENCES access_codes (code)
                 )
             ''')
@@ -3432,6 +3590,103 @@ class PostgreSQLDatabase(DatabaseInterface):
             logger.error(f"Error getting latest summary: {e}")
             return {}
 
+    def save_user_insights(self, user_id: str, access_code: str,
+                          life_situation: str = None, emotional_triggers: str = None,
+                          coping_that_helps: str = None, interests_hobbies: str = None,
+                          support_system: str = None, goals_aspirations: str = None) -> bool:
+        """Save or update user insights in PostgreSQL"""
+        conn = None
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Check if insights exist for this user
+            cursor.execute('SELECT id FROM user_insights WHERE user_id = %s', (user_id,))
+            existing = cursor.fetchone()
+
+            if existing:
+                # Update existing - only update non-None fields
+                updates = []
+                params = []
+                if life_situation is not None:
+                    updates.append('life_situation = %s')
+                    params.append(life_situation)
+                if emotional_triggers is not None:
+                    updates.append('emotional_triggers = %s')
+                    params.append(emotional_triggers)
+                if coping_that_helps is not None:
+                    updates.append('coping_that_helps = %s')
+                    params.append(coping_that_helps)
+                if interests_hobbies is not None:
+                    updates.append('interests_hobbies = %s')
+                    params.append(interests_hobbies)
+                if support_system is not None:
+                    updates.append('support_system = %s')
+                    params.append(support_system)
+                if goals_aspirations is not None:
+                    updates.append('goals_aspirations = %s')
+                    params.append(goals_aspirations)
+
+                if updates:
+                    updates.append('updated_at = CURRENT_TIMESTAMP')
+                    params.append(user_id)
+                    cursor.execute(f'''
+                        UPDATE user_insights SET {', '.join(updates)}
+                        WHERE user_id = %s
+                    ''', params)
+            else:
+                # Insert new
+                cursor.execute('''
+                    INSERT INTO user_insights (user_id, access_code, life_situation,
+                        emotional_triggers, coping_that_helps, interests_hobbies,
+                        support_system, goals_aspirations)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ''', (user_id, access_code, life_situation, emotional_triggers,
+                      coping_that_helps, interests_hobbies, support_system, goals_aspirations))
+
+            conn.commit()
+            self._return_connection(conn)
+            return True
+
+        except Exception as e:
+            logger.error(f"Error saving user insights: {e}")
+            if conn:
+                self._return_connection(conn)
+            return False
+
+    def get_user_insights(self, user_id: str) -> Dict[str, Any]:
+        """Get user insights from PostgreSQL"""
+        conn = None
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT life_situation, emotional_triggers, coping_that_helps,
+                       interests_hobbies, support_system, goals_aspirations
+                FROM user_insights WHERE user_id = %s
+            ''', (user_id,))
+
+            row = cursor.fetchone()
+            self._return_connection(conn)
+
+            if row:
+                return {
+                    'life_situation': row[0],
+                    'emotional_triggers': row[1],
+                    'coping_that_helps': row[2],
+                    'interests_hobbies': row[3],
+                    'support_system': row[4],
+                    'goals_aspirations': row[5]
+                }
+            return {}
+
+        except Exception as e:
+            logger.error(f"Error getting user insights: {e}")
+            if conn:
+                self._return_connection(conn)
+            return {}
+
     def check_user_consent(self, user_id: str) -> bool:
         """Check if user has given consent from PostgreSQL - user_id is now the access_code"""
         conn = None
@@ -4295,6 +4550,18 @@ class DatabaseManager:
     def get_latest_summary(self, user_id: str) -> Dict[str, Any]:
         """Get the most recent conversation summary for a user"""
         return self.database.get_latest_summary(user_id)
+
+    def save_user_insights(self, user_id: str, access_code: str,
+                          life_situation: str = None, emotional_triggers: str = None,
+                          coping_that_helps: str = None, interests_hobbies: str = None,
+                          support_system: str = None, goals_aspirations: str = None) -> bool:
+        """Save or update user insights"""
+        return self.database.save_user_insights(user_id, access_code, life_situation,
+            emotional_triggers, coping_that_helps, interests_hobbies, support_system, goals_aspirations)
+
+    def get_user_insights(self, user_id: str) -> Dict[str, Any]:
+        """Get user insights for a user"""
+        return self.database.get_user_insights(user_id)
 
     def check_user_consent(self, user_id: str) -> bool:
         """Check if user has given consent"""

@@ -307,3 +307,143 @@ Keep each section concise and actionable. Focus on information that would help p
             logger.error(f"Error checking summary status: {e}")
             return False
 
+    def extract_user_insights(self, user_id: str, access_code: str,
+                              messages: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Extract non-PII insights about the user from conversation.
+        Called periodically (e.g., after summary generation) to build user profile.
+
+        Extracts:
+        - life_situation: College year, living situation (without specifics)
+        - emotional_triggers: What causes stress/anxiety
+        - coping_that_helps: Strategies that work for them
+        - interests_hobbies: Activities they enjoy
+        - support_system: General support network (without names)
+        - goals_aspirations: What they're working towards
+        """
+        try:
+            # Get existing insights to merge with
+            existing = self.db.get_user_insights(user_id)
+
+            # Format conversation
+            conversation = "\n".join([
+                f"{msg['role'].upper()}: {msg['content']}"
+                for msg in messages[-20:]  # Last 20 messages
+            ])
+
+            prompt = f"""Based on this conversation, extract NON-IDENTIFIABLE insights about the user.
+DO NOT include: names, specific schools/colleges, phone numbers, locations, or any PII.
+DO include: general life stage, emotional patterns, what helps them, interests.
+
+CONVERSATION:
+{conversation}
+
+EXISTING INSIGHTS (merge with these, update if new info):
+{json.dumps(existing, indent=2) if existing else "None yet"}
+
+Extract insights in this exact format (each 1-2 sentences max, or "Unknown" if not mentioned):
+
+LIFE_SITUATION: [e.g., "College student in 2nd year", "Lives with family", "Working while studying"]
+
+EMOTIONAL_TRIGGERS: [What causes them stress/anxiety, e.g., "Academic pressure especially before exams", "Comparison with peers"]
+
+COPING_THAT_HELPS: [Strategies that work for them, e.g., "Talking to friends helps", "Music and journaling"]
+
+INTERESTS_HOBBIES: [What they enjoy, e.g., "Enjoys playing guitar", "Likes reading fiction"]
+
+SUPPORT_SYSTEM: [General support without names, e.g., "Has a close friend group", "Supportive sibling"]
+
+GOALS_ASPIRATIONS: [What they want, e.g., "Wants to do well in exams", "Exploring career options"]
+
+Remember: NO NAMES, NO SPECIFIC PLACES, NO IDENTIFIABLE INFO."""
+
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You extract non-identifiable user insights for mental health support context. Never include names, schools, or specific locations."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,
+                max_tokens=400
+            )
+
+            insights_text = response.choices[0].message.content
+            insights = self._parse_insights(insights_text)
+
+            # Save to database
+            self.db.save_user_insights(
+                user_id=user_id,
+                access_code=access_code,
+                life_situation=insights.get('life_situation'),
+                emotional_triggers=insights.get('emotional_triggers'),
+                coping_that_helps=insights.get('coping_that_helps'),
+                interests_hobbies=insights.get('interests_hobbies'),
+                support_system=insights.get('support_system'),
+                goals_aspirations=insights.get('goals_aspirations')
+            )
+
+            logger.info(f"Extracted and saved insights for user {user_id}")
+            return insights
+
+        except Exception as e:
+            logger.error(f"Error extracting user insights: {e}")
+            return {}
+
+    def _parse_insights(self, text: str) -> Dict[str, Any]:
+        """Parse LLM-generated insights into structured format"""
+        insights = {}
+
+        sections = {
+            'LIFE_SITUATION:': 'life_situation',
+            'EMOTIONAL_TRIGGERS:': 'emotional_triggers',
+            'COPING_THAT_HELPS:': 'coping_that_helps',
+            'INTERESTS_HOBBIES:': 'interests_hobbies',
+            'SUPPORT_SYSTEM:': 'support_system',
+            'GOALS_ASPIRATIONS:': 'goals_aspirations'
+        }
+
+        for line in text.split('\n'):
+            line = line.strip()
+            for header, field in sections.items():
+                if line.startswith(header):
+                    value = line[len(header):].strip()
+                    # Don't save "Unknown" values
+                    if value and value.lower() != 'unknown':
+                        insights[field] = value
+                    break
+
+        return insights
+
+    def get_user_insights_context(self, user_id: str) -> str:
+        """
+        Get formatted user insights to include in system prompt.
+        Returns empty string if no insights available.
+        """
+        try:
+            insights = self.db.get_user_insights(user_id)
+
+            if not insights or not any(insights.values()):
+                return ""
+
+            context = "USER CONTEXT (what you know about this person):\n"
+
+            if insights.get('life_situation'):
+                context += f"- Situation: {insights['life_situation']}\n"
+            if insights.get('emotional_triggers'):
+                context += f"- What triggers stress: {insights['emotional_triggers']}\n"
+            if insights.get('coping_that_helps'):
+                context += f"- What helps them: {insights['coping_that_helps']}\n"
+            if insights.get('interests_hobbies'):
+                context += f"- Interests: {insights['interests_hobbies']}\n"
+            if insights.get('support_system'):
+                context += f"- Support: {insights['support_system']}\n"
+            if insights.get('goals_aspirations'):
+                context += f"- Goals: {insights['goals_aspirations']}\n"
+
+            context += "\nUse this context to personalize your responses."
+            return context
+
+        except Exception as e:
+            logger.error(f"Error getting user insights context: {e}")
+            return ""
+
