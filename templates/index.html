@@ -502,6 +502,34 @@
             min-height: 0;
         }
 
+        .chat-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+            gap: 1rem;
+        }
+
+        .chat-loading p {
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--background-tertiary);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         .message {
             margin-bottom: 1rem;
             display: flex;
@@ -1482,7 +1510,11 @@
     <div class="main-content">
         <div class="chat-container">
             <div class="messages" id="messages">
-                <!-- Messages will be loaded from database -->
+                <!-- Loading indicator shown while fetching chat history -->
+                <div id="chat-loading" class="chat-loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading your conversation...</p>
+                </div>
             </div>
 
             <div class="typing-indicator" id="typing">
@@ -1885,7 +1917,15 @@
         }
 
         // Display chat history from init response - uses existing addMessage function
+        function hideLoadingIndicator() {
+            const loader = document.getElementById('chat-loading');
+            if (loader) {
+                loader.remove();
+            }
+        }
+
         function displayChatHistory(messages) {
+            hideLoadingIndicator();
             const messagesContainer = document.getElementById('messages');
             messagesContainer.innerHTML = '';
 
@@ -1896,6 +1936,7 @@
 
         // Show welcome message for new users - uses existing addMessage function
         function showWelcomeMessage() {
+            hideLoadingIndicator();
             const messagesContainer = document.getElementById('messages');
             messagesContainer.innerHTML = '';
 
