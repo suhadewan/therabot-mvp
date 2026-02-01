@@ -20,7 +20,7 @@ class Config:
         os.getenv("THERABOT_MODEL_TEMPERATURE", 0.7)
     )
     MODEL_MAX_TOKENS = int(
-        os.getenv("THERABOT_MODEL_MAX_TOKENS", 100)
+        os.getenv("THERABOT_MODEL_MAX_TOKENS", 200)  # Increased for more helpful responses
     )
     MODEL_STREAM = (
         os.getenv("THERABOT_MODEL_STREAM", "true").lower() == "true"
