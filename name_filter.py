@@ -13,6 +13,9 @@ logger = logging.getLogger(__name__)
 # Cache for loaded names
 _names_cache = None
 
+# Minimum name length to consider for filtering
+MIN_NAME_LENGTH = 3
+
 
 def load_names(csv_path: str = None) -> set:
     """
@@ -37,9 +40,9 @@ def load_names(csv_path: str = None) -> set:
 
             for row in reader:
                 for name in row:
-                    name = name.strip()
-                    if name and len(name) > 1:  # Skip empty or single-char entries
-                        names.add(name.lower())
+                    name = name.strip().lower()
+                    if name and len(name) >= MIN_NAME_LENGTH:
+                        names.add(name)
 
         logger.info(f"Loaded {len(names)} names for filtering")
         _names_cache = names
