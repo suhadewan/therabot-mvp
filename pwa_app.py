@@ -52,6 +52,7 @@ from database import init_database, get_database
 from memory_manager import MemoryManager
 from rate_limiter import rate_limit, get_rate_limit_status
 from email_notifications import send_flag_notification_async
+from name_filter import redact_names_in_messages
 
 # Timezone configuration
 # India Standard Time (IST) for production
@@ -1094,10 +1095,13 @@ def admin_flagged_chats():
 
         # Get flagged chats from flagged_chats table
         flagged_chats = db.get_flagged_chats(limit, offset)
-        
+
+        # Redact names for privacy
+        flagged_chats = redact_names_in_messages(flagged_chats)
+
         # Get stats
         stats = db.get_stats()
-        
+
         return jsonify({
             "flagged_chats": flagged_chats,
             "stats": stats,
@@ -1958,7 +1962,10 @@ def admin_get_user_chats(access_code):
     try:
         db = get_database()
         messages = db.get_user_chats(access_code)
-        
+
+        # Redact names for privacy
+        messages = redact_names_in_messages(messages)
+
         return jsonify({
             "access_code": access_code,
             "message_count": len(messages),
