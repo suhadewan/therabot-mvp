@@ -2302,13 +2302,14 @@ class SQLiteDatabase(DatabaseInterface):
 
             # Get all unique users (access codes) with their message counts and last activity
             cursor.execute('''
-                SELECT 
+                SELECT
                     cm.access_code,
                     ac.user_type,
                     ac.school_id,
                     COUNT(cm.id) as message_count,
                     MAX(cm.timestamp) as last_activity,
-                    MIN(cm.timestamp) as first_activity
+                    MIN(cm.timestamp) as first_activity,
+                    ac.reviewer
                 FROM chat_messages cm
                 LEFT JOIN access_codes ac ON cm.access_code = ac.code
                 GROUP BY cm.access_code
@@ -2324,7 +2325,8 @@ class SQLiteDatabase(DatabaseInterface):
                     'school_id': row[2] or 'N/A',
                     'message_count': row[3],
                     'last_activity': row[4],
-                    'first_activity': row[5]
+                    'first_activity': row[5],
+                    'reviewer': row[6]
                 })
 
             conn.close()
@@ -4741,16 +4743,17 @@ class PostgreSQLDatabase(DatabaseInterface):
 
             # Get all unique users (access codes) with their message counts and last activity
             cursor.execute('''
-                SELECT 
+                SELECT
                     cm.access_code,
                     ac.user_type,
                     ac.school_id,
                     COUNT(cm.id) as message_count,
                     MAX(cm.timestamp) as last_activity,
-                    MIN(cm.timestamp) as first_activity
+                    MIN(cm.timestamp) as first_activity,
+                    ac.reviewer
                 FROM chat_messages cm
                 LEFT JOIN access_codes ac ON cm.access_code = ac.code
-                GROUP BY cm.access_code, ac.user_type, ac.school_id
+                GROUP BY cm.access_code, ac.user_type, ac.school_id, ac.reviewer
                 ORDER BY MAX(cm.timestamp) DESC
             ''')
 
@@ -4763,7 +4766,8 @@ class PostgreSQLDatabase(DatabaseInterface):
                     'school_id': row[2] or 'N/A',
                     'message_count': row[3],
                     'last_activity': str(row[4]) if row[4] else None,
-                    'first_activity': str(row[5]) if row[5] else None
+                    'first_activity': str(row[5]) if row[5] else None,
+                    'reviewer': row[6]
                 })
 
             cursor.close()

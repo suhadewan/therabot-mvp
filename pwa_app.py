@@ -668,20 +668,9 @@ def consent():
 
 @app.route('/emergency-contact')
 def emergency_contact():
-    """Serve the emergency contact page - requires authentication"""
-    # Check if user has Flask session (they must be logged in)
-    user_id = session.get('user_id')
-    if not user_id:
-        # Not logged in, redirect to login
-        return redirect(url_for('login'))
-
-    # Check if user has consented first
-    db = get_database()
-    has_consented = db.check_user_consent(user_id)
-    if not has_consented:
-        # Must consent before emergency contact
-        return redirect(url_for('consent'))
-
+    """Serve the emergency contact page - auth is checked client-side via localStorage"""
+    # The page itself checks localStorage for mindmitra_login_id
+    # and redirects to login if not found
     return render_template('emergency_contact.html')
 
 @app.route('/admin-login')
@@ -693,6 +682,16 @@ def admin_login_page():
 def admin():
     """Serve the admin dashboard"""
     return render_template('admin.html')
+
+@app.route('/reviewer-login')
+def reviewer_login_page():
+    """Serve the reviewer login page"""
+    return render_template('reviewer_login.html')
+
+@app.route('/reviewer')
+def reviewer():
+    """Serve the reviewer dashboard"""
+    return render_template('reviewer.html')
 
 @app.route('/api/chat/init', methods=['POST'])
 def init_chat():
@@ -1448,6 +1447,25 @@ def logout():
         print(f"Logout error: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
+def get_next_reviewer():
+    """Get the next reviewer in round-robin fashion (assigns to reviewer with fewest users)"""
+    try:
+        db = get_database()
+        all_codes = db.get_all_access_codes()
+
+        # Count users assigned to each reviewer
+        counts = {1: 0, 2: 0, 3: 0}
+        for code in all_codes:
+            reviewer = code.get('reviewer')
+            if reviewer in counts:
+                counts[reviewer] += 1
+
+        # Return the reviewer with the fewest assignments
+        return min(counts, key=counts.get)
+    except Exception as e:
+        logger.error(f"Error getting next reviewer: {e}")
+        return 1  # Default to reviewer 1 if error
+
 @app.route('/api/consent', methods=['POST'])
 def save_consent():
     """Save user's consent decision"""
@@ -1474,6 +1492,14 @@ def save_consent():
         if consent_accepted:
             # User ACCEPTED - grant access
             logger.info(f"User ACCEPTED consent for access code: {access_code}, user_id: {user_id}")
+
+            # Auto-assign reviewer using round-robin (only if not already assigned)
+            all_codes = db.get_all_access_codes()
+            current_code = next((c for c in all_codes if c.get('code') == access_code), None)
+            if current_code and current_code.get('reviewer') is None:
+                next_reviewer = get_next_reviewer()
+                db.update_access_code(access_code, reviewer=next_reviewer)
+                logger.info(f"Auto-assigned reviewer {next_reviewer} to access code: {access_code}")
 
             # Set session for future requests
             session['user_id'] = user_id
@@ -1619,10 +1645,133 @@ def admin_logout():
     try:
         # For now, just return success (you could add session management later)
         return jsonify({"success": True, "message": "Admin logged out successfully"})
-        
+
     except Exception as e:
         print(f"Admin logout error: {e}")
         return jsonify({"error": "Internal server error"}), 500
+
+# ============ REVIEWER ENDPOINTS ============
+
+# Shared reviewer password - in production, set via environment variable
+REVIEWER_PASSWORD = os.getenv('REVIEWER_PASSWORD', 'reviewerpass')
+
+@app.route('/api/reviewer/login', methods=['POST'])
+def reviewer_login():
+    """Reviewer login with shared password"""
+    try:
+        data = request.get_json()
+        password = data.get('password')
+
+        if not password:
+            return jsonify({"error": "Password is required"}), 400
+
+        if password != REVIEWER_PASSWORD:
+            return jsonify({"error": "Invalid password"}), 401
+
+        return jsonify({
+            "success": True,
+            "message": "Reviewer login successful"
+        })
+
+    except Exception as e:
+        logger.error(f"Reviewer login error: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/reviewer/<int:reviewer_id>/users')
+def get_reviewer_users(reviewer_id):
+    """Get users assigned to a specific reviewer (for reviewer portal)"""
+    try:
+        if reviewer_id not in [1, 2, 3]:
+            return jsonify({"error": "Invalid reviewer ID"}), 400
+
+        db = get_database()
+
+        # Use the same logic as admin endpoint but for reviewer portal
+        all_users = db.get_users_list()
+
+        # Filter for this reviewer's assigned users only
+        filtered_users = [
+            user for user in all_users
+            if user.get('reviewer') == reviewer_id
+        ]
+
+        # Check for recent flags (last 48 hours) for each user
+        from datetime import datetime, timedelta
+        cutoff_time = datetime.utcnow() - timedelta(hours=48)
+
+        for user in filtered_users:
+            # Get user's chats and check for recent flags
+            chats = db.get_user_chats(user['access_code'])
+            has_recent_flag = False
+            for chat in chats:
+                msg_type = chat.get('message_type', 'normal')
+                if msg_type in ['crisis', 'safety_concern', 'safety']:
+                    try:
+                        msg_time = datetime.fromisoformat(chat['timestamp'].replace('Z', '+00:00'))
+                        if msg_time.replace(tzinfo=None) > cutoff_time:
+                            has_recent_flag = True
+                            break
+                    except:
+                        pass
+            user['has_recent_flag'] = has_recent_flag
+
+        return jsonify({
+            "success": True,
+            "users": filtered_users,
+            "count": len(filtered_users)
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting reviewer users: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/reviewer/<int:reviewer_id>/user-chats/<access_code>')
+def get_reviewer_user_chats(reviewer_id, access_code):
+    """Get chat messages for a user (reviewer portal).
+    Supports ?hours=48 query param to filter to last N hours.
+    Any reviewer can access any user's chats (for coverage when someone is out)."""
+    try:
+        if reviewer_id not in [1, 2, 3]:
+            return jsonify({"error": "Invalid reviewer ID"}), 400
+
+        db = get_database()
+
+        # Get all chat messages (no reviewer restriction - any reviewer can view any user)
+        all_messages = db.get_user_chats(access_code)
+        total_count = len(all_messages)
+
+        # Check if we should filter by hours
+        hours = request.args.get('hours', type=int)
+        if hours:
+            from datetime import datetime, timedelta
+            cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+            filtered_messages = []
+            for msg in all_messages:
+                try:
+                    msg_time = datetime.fromisoformat(msg['timestamp'].replace('Z', '+00:00'))
+                    if msg_time.replace(tzinfo=None) > cutoff_time:
+                        filtered_messages.append(msg)
+                except:
+                    pass
+            messages = filtered_messages
+        else:
+            messages = all_messages
+
+        return jsonify({
+            "success": True,
+            "access_code": access_code,
+            "messages": messages,
+            "message_count": len(messages),
+            "total_count": total_count
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting reviewer user chats: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+# ============ END REVIEWER ENDPOINTS ============
 
 @app.route('/admin/access-codes', methods=['GET'])
 def get_access_codes():
