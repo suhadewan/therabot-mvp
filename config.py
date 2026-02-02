@@ -75,7 +75,7 @@ class Config:
     # File Paths
     SYSTEM_PROMPT_FILE = os.getenv(
         "THERABOT_SYSTEM_PROMPT_FILE",
-        "system_prompt_v2.txt"
+        "system_prompt_base_model.txt.txt"
     )
 
     # Moderation
