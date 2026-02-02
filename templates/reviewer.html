@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reviewer Portal - MindMitra</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #374151;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: #667eea;
+            color: white;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+        }
+
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            background: #f9fafb;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 1rem;
+            color: #6b7280;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .tab:hover:not(.active) {
+            background: #f3f4f6;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 1000px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: #f9fafb;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header h2 {
+            font-size: 1.1rem;
+            color: #374151;
+        }
+
+        .users-list {
+            max-height: 650px;
+            overflow-y: auto;
+        }
+
+        .user-item {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f3f4f6;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .user-item:hover {
+            background: #f9fafb;
+        }
+
+        .user-item.selected {
+            background: #eff6ff;
+            border-left: 3px solid #667eea;
+        }
+
+        .user-item:last-child {
+            border-bottom: none;
+        }
+
+        .user-flag {
+            color: #dc2626;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .user-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .user-code {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #374151;
+            margin-bottom: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .user-details {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+
+        .chat-panel {
+            display: flex;
+            flex-direction: column;
+            max-height: 750px;
+        }
+
+        .chat-header {
+            padding: 1rem 1.5rem;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .chat-header h3 {
+            color: #374151;
+            margin-bottom: 0.25rem;
+        }
+
+        .chat-header p {
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+
+        .chat-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .chat-controls button {
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chat-controls button.active {
+            background: #667eea;
+            color: white;
+            border: 1px solid #667eea;
+        }
+
+        .chat-controls button:not(.active) {
+            background: white;
+            color: #6b7280;
+            border: 1px solid #e5e7eb;
+        }
+
+        .chat-controls button:not(.active):hover {
+            background: #f3f4f6;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .message-item {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+
+        .message-item.user {
+            background: #eff6ff;
+            border-left: 3px solid #3b82f6;
+        }
+
+        .message-item.assistant {
+            background: #f0fdf4;
+            border-left: 3px solid #22c55e;
+        }
+
+        .message-item.flagged {
+            background: #fef2f2;
+            border-left: 3px solid #dc2626;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .message-role {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .message-role.user {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .message-role.assistant {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .message-type {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            margin-left: 0.5rem;
+        }
+
+        .message-type.crisis {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .message-type.safety, .message-type.safety_concern {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .message-type.normal {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+
+        .message-timestamp {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        .message-content {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 400px;
+            color: #9ca3af;
+            text-align: center;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            color: #6b7280;
+        }
+
+        .search-box {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.6rem 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: #6b7280;
+            padding: 0.5rem 0;
+        }
+
+        .stat-badge {
+            background: #f3f4f6;
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+        }
+
+        .stat-badge.flagged {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>MindMitra Reviewer Portal</h1>
+        <button onclick="logout()" class="logout-btn">Logout</button>
+    </div>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab active" onclick="showTab(1)">Reviewer 1</button>
+            <button class="tab" onclick="showTab(2)">Reviewer 2</button>
+            <button class="tab" onclick="showTab(3)">Reviewer 3</button>
+        </div>
+
+        <!-- Reviewer 1 Tab -->
+        <div id="tab-1" class="tab-content active">
+            <div class="main-content">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>Assigned Users</h2>
+                        <span class="stat-badge" id="userCount-1">0 users</span>
+                    </div>
+                    <div class="search-box">
+                        <input type="text" id="searchInput-1" placeholder="Search by access code..." oninput="filterUsers(1)">
+                    </div>
+                    <div class="users-list" id="usersList-1">
+                        <div class="loading">Loading users...</div>
+                    </div>
+                </div>
+
+                <div class="panel chat-panel" id="chatPanel-1">
+                    <div class="chat-header" id="chatHeader-1">
+                        <h3>Select a User</h3>
+                        <p>Choose a user from the list to view their conversation</p>
+                    </div>
+                    <div class="chat-messages" id="chatMessages-1">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">💬</div>
+                            <p>Select a user to view their chat history</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reviewer 2 Tab -->
+        <div id="tab-2" class="tab-content">
+            <div class="main-content">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>Assigned Users</h2>
+                        <span class="stat-badge" id="userCount-2">0 users</span>
+                    </div>
+                    <div class="search-box">
+                        <input type="text" id="searchInput-2" placeholder="Search by access code..." oninput="filterUsers(2)">
+                    </div>
+                    <div class="users-list" id="usersList-2">
+                        <div class="loading">Loading users...</div>
+                    </div>
+                </div>
+
+                <div class="panel chat-panel" id="chatPanel-2">
+                    <div class="chat-header" id="chatHeader-2">
+                        <h3>Select a User</h3>
+                        <p>Choose a user from the list to view their conversation</p>
+                    </div>
+                    <div class="chat-messages" id="chatMessages-2">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">💬</div>
+                            <p>Select a user to view their chat history</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reviewer 3 Tab -->
+        <div id="tab-3" class="tab-content">
+            <div class="main-content">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>Assigned Users</h2>
+                        <span class="stat-badge" id="userCount-3">0 users</span>
+                    </div>
+                    <div class="search-box">
+                        <input type="text" id="searchInput-3" placeholder="Search by access code..." oninput="filterUsers(3)">
+                    </div>
+                    <div class="users-list" id="usersList-3">
+                        <div class="loading">Loading users...</div>
+                    </div>
+                </div>
+
+                <div class="panel chat-panel" id="chatPanel-3">
+                    <div class="chat-header" id="chatHeader-3">
+                        <h3>Select a User</h3>
+                        <p>Choose a user from the list to view their conversation</p>
+                    </div>
+                    <div class="chat-messages" id="chatMessages-3">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">💬</div>
+                            <p>Select a user to view their chat history</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Store users data and state for each tab
+        const tabData = {
+            1: { users: [], selectedUser: null, showAll: false },
+            2: { users: [], selectedUser: null, showAll: false },
+            3: { users: [], selectedUser: null, showAll: false }
+        };
+
+        // Check authentication
+        function checkAuth() {
+            const isLoggedIn = localStorage.getItem('mindmitra_reviewer_logged_in');
+            if (!isLoggedIn) {
+                window.location.href = '/reviewer-login';
+                return;
+            }
+            // Load all tabs
+            loadUsers(1);
+            loadUsers(2);
+            loadUsers(3);
+        }
+
+        // Logout
+        function logout() {
+            localStorage.removeItem('mindmitra_reviewer_logged_in');
+            localStorage.removeItem('mindmitra_reviewer_id');
+            window.location.href = '/reviewer-login';
+        }
+
+        // Tab switching
+        function showTab(tabId) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+
+            // Show selected tab
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            document.querySelectorAll('.tab')[tabId - 1].classList.add('active');
+        }
+
+        // Load users for a reviewer tab
+        async function loadUsers(reviewerId) {
+            try {
+                const response = await fetch(`/api/reviewer/${reviewerId}/users`);
+                const data = await response.json();
+
+                if (data.success && data.users) {
+                    tabData[reviewerId].users = data.users;
+                    renderUsers(reviewerId);
+                    document.getElementById(`userCount-${reviewerId}`).textContent = `${data.users.length} users`;
+                } else {
+                    document.getElementById(`usersList-${reviewerId}`).innerHTML = `
+                        <div class="empty-state" style="height: 200px;">
+                            <p>No users assigned</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById(`usersList-${reviewerId}`).innerHTML = `
+                    <div class="loading" style="color: #dc2626;">Error loading users</div>
+                `;
+            }
+        }
+
+        // Render users list
+        function renderUsers(reviewerId) {
+            const users = tabData[reviewerId].users;
+            const searchTerm = document.getElementById(`searchInput-${reviewerId}`).value.toLowerCase();
+            const filtered = users.filter(user =>
+                user.access_code.toLowerCase().includes(searchTerm) ||
+                (user.school_id && user.school_id.toLowerCase().includes(searchTerm))
+            );
+
+            const usersList = document.getElementById(`usersList-${reviewerId}`);
+
+            if (filtered.length === 0) {
+                usersList.innerHTML = `
+                    <div class="empty-state" style="height: 200px;">
+                        <p>No matching users found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            usersList.innerHTML = filtered.map(user => {
+                const isSelected = tabData[reviewerId].selectedUser === user.access_code;
+                const hasRecentFlag = user.has_recent_flag;
+                return `
+                    <div class="user-item ${isSelected ? 'selected' : ''}" onclick="selectUser('${user.access_code}', ${reviewerId})">
+                        ${hasRecentFlag ? '<span class="user-flag" title="Flagged message in last 48 hours">🚩</span>' : ''}
+                        <div class="user-info">
+                            <div class="user-code">${user.access_code}</div>
+                            <div class="user-details">
+                                📍 ${user.school_id || 'N/A'} · 💬 ${user.message_count || 0} msgs
+                            </div>
+                            <div class="user-details">
+                                🕐 ${formatDate(user.last_activity)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Filter users
+        function filterUsers(reviewerId) {
+            renderUsers(reviewerId);
+        }
+
+        // Select user and load chats
+        async function selectUser(accessCode, reviewerId) {
+            tabData[reviewerId].selectedUser = accessCode;
+            tabData[reviewerId].showAll = false; // Reset to 48h view
+            renderUsers(reviewerId);
+            loadUserChats(accessCode, reviewerId, false);
+        }
+
+        // Load user chats
+        async function loadUserChats(accessCode, reviewerId, showAll) {
+            tabData[reviewerId].showAll = showAll;
+
+            document.getElementById(`chatHeader-${reviewerId}`).innerHTML = `
+                <h3>Chats for ${accessCode}</h3>
+                <p>Loading...</p>
+            `;
+            document.getElementById(`chatMessages-${reviewerId}`).innerHTML = '<div class="loading">Loading messages...</div>';
+
+            try {
+                const timeFilter = showAll ? '' : '?hours=48';
+                const response = await fetch(`/api/reviewer/${reviewerId}/user-chats/${accessCode}${timeFilter}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const totalCount = data.total_count || data.messages.length;
+                    const showingCount = data.messages.length;
+
+                    document.getElementById(`chatHeader-${reviewerId}`).innerHTML = `
+                        <h3>Chats for ${accessCode}</h3>
+                        <p>Showing ${showingCount} of ${totalCount} messages</p>
+                        <div class="chat-controls">
+                            <button class="${!showAll ? 'active' : ''}" onclick="loadUserChats('${accessCode}', ${reviewerId}, false)">
+                                Last 48 Hours
+                            </button>
+                            <button class="${showAll ? 'active' : ''}" onclick="loadUserChats('${accessCode}', ${reviewerId}, true)">
+                                All Messages
+                            </button>
+                        </div>
+                    `;
+
+                    if (data.messages.length === 0) {
+                        document.getElementById(`chatMessages-${reviewerId}`).innerHTML = `
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📭</div>
+                                <p>${showAll ? 'No messages yet' : 'No messages in the last 48 hours'}</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    document.getElementById(`chatMessages-${reviewerId}`).innerHTML = data.messages.map(msg => {
+                        const messageType = msg.message_type || 'normal';
+                        const isFlagged = messageType === 'crisis' || messageType === 'safety_concern';
+                        return `
+                            <div class="message-item ${msg.role} ${isFlagged ? 'flagged' : ''}">
+                                <div class="message-header">
+                                    <div>
+                                        <span class="message-role ${msg.role}">${msg.role}</span>
+                                        <span class="message-type ${messageType}">${messageType}</span>
+                                    </div>
+                                    <span class="message-timestamp">${formatDate(msg.timestamp)}</span>
+                                </div>
+                                <div class="message-content">${escapeHtml(msg.content)}</div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    // Scroll to bottom for most recent
+                    const chatMessages = document.getElementById(`chatMessages-${reviewerId}`);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                } else {
+                    document.getElementById(`chatMessages-${reviewerId}`).innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">❌</div>
+                            <p>Could not load messages</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById(`chatMessages-${reviewerId}`).innerHTML = `
+                    <div class="loading" style="color: #dc2626;">Error loading messages</div>
+                `;
+            }
+        }
+
+        // Format date
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            const date = new Date(dateStr);
+            return date.toLocaleString('en-IN', {
+                day: '2-digit',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize
+        checkAuth();
+    </script>
+</body>
+</html>

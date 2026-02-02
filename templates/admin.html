@@ -587,9 +587,6 @@
 
         <div class="tabs">
             <button class="tab active" onclick="showTab('flagged-chats')">🚨 Flagged Chats</button>
-            <button class="tab" onclick="showTab('reviewer-1')">👤 Reviewer 1</button>
-            <button class="tab" onclick="showTab('reviewer-2')">👤 Reviewer 2</button>
-            <button class="tab" onclick="showTab('reviewer-3')">👤 Reviewer 3</button>
             <button class="tab" onclick="showTab('access-codes')">🔑 Access Codes</button>
         </div>
 
@@ -606,105 +603,6 @@
                     <button onclick="previousPage()" id="prevBtn">Previous</button>
                     <span class="current-page" id="currentPage">Page 1</span>
                     <button onclick="nextPage()" id="nextBtn">Next</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Reviewer 1 Tab -->
-        <div id="reviewer-1" class="tab-content">
-            <div class="flagged-chats">
-                <div class="section-header">
-                    <h2>👤 Reviewer 1 - Assigned Users</h2>
-                    <p style="margin-top: 0.5rem; color: #6b7280; font-size: 0.9rem;">
-                        Students assigned to Reviewer 1 (excludes admin/teacher and test schools)
-                    </p>
-                </div>
-                <div class="chat-list" id="reviewer1UsersList">
-                    <div class="loading">Loading users...</div>
-                </div>
-            </div>
-
-            <!-- Selected User's Chat History for Reviewer 1 -->
-            <div id="selectedUserChats-1" class="selectedUserChats" style="display: none; margin-top: 2rem;">
-                <div class="flagged-chats">
-                    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <h2 id="selectedUserTitle-1">User Chats</h2>
-                            <p id="selectedUserInfo-1" style="margin-top: 0.5rem; color: #6b7280; font-size: 0.9rem;"></p>
-                        </div>
-                        <button onclick="clearSelectedUser(1)" class="btn btn-small" style="background: #e5e7eb; color: #374151;">
-                            Back to Users List
-                        </button>
-                    </div>
-                    <div class="chat-list" id="userChatMessages-1" style="max-height: 800px;">
-                        <div class="loading">Loading messages...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Reviewer 2 Tab -->
-        <div id="reviewer-2" class="tab-content">
-            <div class="flagged-chats">
-                <div class="section-header">
-                    <h2>👤 Reviewer 2 - Assigned Users</h2>
-                    <p style="margin-top: 0.5rem; color: #6b7280; font-size: 0.9rem;">
-                        Students assigned to Reviewer 2 (excludes admin/teacher and test schools)
-                    </p>
-                </div>
-                <div class="chat-list" id="reviewer2UsersList">
-                    <div class="loading">Loading users...</div>
-                </div>
-            </div>
-
-            <!-- Selected User's Chat History for Reviewer 2 -->
-            <div id="selectedUserChats-2" class="selectedUserChats" style="display: none; margin-top: 2rem;">
-                <div class="flagged-chats">
-                    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <h2 id="selectedUserTitle-2">User Chats</h2>
-                            <p id="selectedUserInfo-2" style="margin-top: 0.5rem; color: #6b7280; font-size: 0.9rem;"></p>
-                        </div>
-                        <button onclick="clearSelectedUser(2)" class="btn btn-small" style="background: #e5e7eb; color: #374151;">
-                            Back to Users List
-                        </button>
-                    </div>
-                    <div class="chat-list" id="userChatMessages-2" style="max-height: 800px;">
-                        <div class="loading">Loading messages...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Reviewer 3 Tab -->
-        <div id="reviewer-3" class="tab-content">
-            <div class="flagged-chats">
-                <div class="section-header">
-                    <h2>👤 Reviewer 3 - Assigned Users</h2>
-                    <p style="margin-top: 0.5rem; color: #6b7280; font-size: 0.9rem;">
-                        Students assigned to Reviewer 3 (excludes admin/teacher and test schools)
-                    </p>
-                </div>
-                <div class="chat-list" id="reviewer3UsersList">
-                    <div class="loading">Loading users...</div>
-                </div>
-            </div>
-
-            <!-- Selected User's Chat History for Reviewer 3 -->
-            <div id="selectedUserChats-3" class="selectedUserChats" style="display: none; margin-top: 2rem;">
-                <div class="flagged-chats">
-                    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <h2 id="selectedUserTitle-3">User Chats</h2>
-                            <p id="selectedUserInfo-3" style="margin-top: 0.5rem; color: #6b7280; font-size: 0.9rem;"></p>
-                        </div>
-                        <button onclick="clearSelectedUser(3)" class="btn btn-small" style="background: #e5e7eb; color: #374151;">
-                            Back to Users List
-                        </button>
-                    </div>
-                    <div class="chat-list" id="userChatMessages-3" style="max-height: 800px;">
-                        <div class="loading">Loading messages...</div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -943,10 +841,6 @@
             loadStats();
             loadFlaggedChats();
             loadAccessCodes();
-            // Load reviewer tabs data
-            loadReviewerUsers(1);
-            loadReviewerUsers(2);
-            loadReviewerUsers(3);
         });
 
         // Refresh data every 30 seconds
@@ -1002,10 +896,6 @@
                     alert(result.message);
                     e.target.reset();
                     loadAccessCodes();
-                    // Reload reviewer tabs
-                    loadReviewerUsers(1);
-                    loadReviewerUsers(2);
-                    loadReviewerUsers(3);
                 } else {
                     alert('Error: ' + result.error);
                 }
@@ -1157,10 +1047,6 @@
                     alert(result.message);
                     closeEditModal();
                     loadAccessCodes();
-                    // Reload reviewer tabs
-                    loadReviewerUsers(1);
-                    loadReviewerUsers(2);
-                    loadReviewerUsers(3);
                 } else {
                     alert('Error: ' + result.error);
                 }
@@ -1175,95 +1061,6 @@
                 closeEditModal();
             }
         });
-
-        // Reviewer Tab Functions
-        async function loadReviewerUsers(reviewerId) {
-            try {
-                const response = await fetch(`/admin/reviewer/${reviewerId}/users`);
-                const data = await response.json();
-
-                const usersList = document.getElementById(`reviewer${reviewerId}UsersList`);
-
-                if (data.users && data.users.length > 0) {
-                    usersList.innerHTML = data.users.map(user => `
-                        <div class="user-item" onclick="loadUserChatsForReviewer('${user.access_code}', ${reviewerId})">
-                            <div class="user-info">
-                                <div class="user-code">${user.access_code}</div>
-                                <div class="user-details">
-                                    School: ${user.school_id} |
-                                    Messages: ${user.message_count} |
-                                    Last Active: ${new Date(user.last_activity).toLocaleString()}
-                                </div>
-                            </div>
-                            <div>
-                                <button class="btn btn-primary btn-small" onclick="event.stopPropagation(); loadUserChatsForReviewer('${user.access_code}', ${reviewerId})">
-                                    View Chats
-                                </button>
-                            </div>
-                        </div>
-                    `).join('');
-                } else {
-                    usersList.innerHTML = '<div class="loading">No users assigned to Reviewer ' + reviewerId + '</div>';
-                }
-            } catch (error) {
-                document.getElementById(`reviewer${reviewerId}UsersList`).innerHTML = `
-                    <div class="error">Error loading users: ${error.message}</div>
-                `;
-            }
-        }
-
-        async function loadUserChatsForReviewer(accessCode, reviewerId) {
-            try {
-                // Show the selected user chats section for this reviewer
-                document.getElementById(`selectedUserChats-${reviewerId}`).style.display = 'block';
-                document.getElementById(`userChatMessages-${reviewerId}`).innerHTML = '<div class="loading">Loading messages...</div>';
-
-                // Scroll to the chat history
-                document.getElementById(`selectedUserChats-${reviewerId}`).scrollIntoView({ behavior: 'smooth' });
-
-                const response = await fetch(`/admin/user-chats/${accessCode}`);
-                const data = await response.json();
-
-                // Update header
-                document.getElementById(`selectedUserTitle-${reviewerId}`).textContent = `Chats for ${accessCode}`;
-                document.getElementById(`selectedUserInfo-${reviewerId}`).textContent =
-                    `Total messages: ${data.message_count} | Viewing complete conversation history`;
-
-                const chatMessages = document.getElementById(`userChatMessages-${reviewerId}`);
-
-                if (data.messages && data.messages.length > 0) {
-                    chatMessages.innerHTML = data.messages.map(msg => {
-                        const date = new Date(msg.timestamp);
-                        const formattedDate = date.toLocaleString();
-                        const messageType = msg.message_type || 'normal';
-
-                        return `
-                            <div class="message-item">
-                                <div class="message-header">
-                                    <div>
-                                        <span class="message-role ${msg.role}">${msg.role}</span>
-                                        <span class="message-type-badge ${messageType}">${messageType}</span>
-                                    </div>
-                                    <span class="message-timestamp">${formattedDate}</span>
-                                </div>
-                                <div class="message-content">${msg.content}</div>
-                            </div>
-                        `;
-                    }).join('');
-                } else {
-                    chatMessages.innerHTML = '<div class="loading">No messages found for this user</div>';
-                }
-            } catch (error) {
-                document.getElementById(`userChatMessages-${reviewerId}`).innerHTML = `
-                    <div class="error">Error loading user chats: ${error.message}</div>
-                `;
-            }
-        }
-
-        function clearSelectedUser(reviewerId) {
-            document.getElementById(`selectedUserChats-${reviewerId}`).style.display = 'none';
-            document.getElementById(`reviewer-${reviewerId}`).scrollIntoView({ behavior: 'smooth' });
-        }
     </script>
 </body>
-</html> 
+</html>

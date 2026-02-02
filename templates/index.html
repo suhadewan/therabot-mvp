@@ -1880,17 +1880,19 @@
         }
 
         // Apply feature group to UI
+        // basic: thermometer, badge, checklist (no streaks)
+        // full: thermometer, streaks, badge, checklist
         function applyFeatureGroup(featureGroup) {
+            // Badge and checklist are shown for both groups
+            document.getElementById('checklistHeaderButton').style.display = 'flex';
+            document.getElementById('badgeHeaderButton').style.display = 'flex';
+            loadBadgeData();
+
+            // Streaks only for full group
             if (featureGroup === 'full') {
                 document.getElementById('streakHeaderButton').style.display = 'flex';
-                document.getElementById('checklistHeaderButton').style.display = 'flex';
-                document.getElementById('badgeHeaderButton').style.display = 'flex';
-                // Load badge data when feature group is applied
-                loadBadgeData();
             } else {
                 document.getElementById('streakHeaderButton').style.display = 'none';
-                document.getElementById('checklistHeaderButton').style.display = 'none';
-                document.getElementById('badgeHeaderButton').style.display = 'none';
             }
         }
 
