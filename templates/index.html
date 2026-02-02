@@ -1478,16 +1478,16 @@
             <!-- Feature buttons container -->
             <div class="feature-buttons-container">
                 <!-- Daily Check-ins button first (everyone has access) -->
-                <button class="feelings-header-button" id="feelingsHeaderButton" onclick="openFeelingsModal()">
+                <button class="feelings-header-button" id="feelingsHeaderButton" onclick="openFeelingsModal()" title="Daily Check-in">
                     <span class="feelings-icon">🌡️</span>
                 </button>
                 <!-- Streak button (only for 'full' feature group) -->
-                <button class="streak-header-button" id="streakHeaderButton" onclick="openStreakModal()" style="display: none;">
+                <button class="streak-header-button" id="streakHeaderButton" onclick="openStreakModal()" style="display: none;" title="Your Streak">
                     <span class="streak-icon">🔥</span>
                     <span id="headerStreakCount">0</span>
                 </button>
                 <!-- Checklist button (only for 'full' feature group) -->
-                <button class="checklist-header-button" id="checklistHeaderButton" onclick="openChecklistModal()" style="display: none;">
+                <button class="checklist-header-button" id="checklistHeaderButton" onclick="openChecklistModal()" style="display: none;" title="Self-care Checklist">
                     <span class="checklist-icon">✅</span>
                 </button>
                 <!-- Badge button (only for 'full' feature group) -->
@@ -1503,8 +1503,8 @@
             <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
                 <i class="fas fa-sun" id="themeIcon"></i>
             </button>
-            <button class="logout-button" onclick="logout()">Logout</button>
-            <button class="hamburger-button" id="hamburgerButton" onclick="toggleHelplines()">☰</button>
+            <button class="logout-button" onclick="logout()" title="Logout">Logout</button>
+            <button class="hamburger-button" id="hamburgerButton" onclick="toggleHelplines()" title="Emergency Helplines">☰</button>
         </div>
 
     <div class="main-content">
@@ -1643,38 +1643,39 @@
 
     <!-- Checklist Modal -->
     <div class="streak-modal-overlay" id="checklistModal">
-        <div class="streak-container" style="max-width: 500px;">
+        <div class="streak-container" style="max-width: 500px; max-height: 90vh; overflow-y: auto;">
             <button class="streak-close-button" onclick="closeChecklistModal()">×</button>
             <div class="streak-header">
                 <div class="streak-flame">✨</div>
                 <div class="streak-count">Daily Checklist</div>
                 <div class="streak-label">Small steps for well-being</div>
             </div>
-            <div id="checklistItems" style="margin-top: 1rem;">
-                <div class="checklist-item" data-item="move" onclick="toggleChecklistItem('move')" style="background: rgba(30,41,59,0.6); border: 1px solid #334155; border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; cursor: pointer; display: flex; gap: 1rem; align-items: flex-start;">
-                    <div class="checklist-checkbox" style="width:24px;height:24px;min-width:24px;border:2px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);"></div>
-                    <div style="flex:1"><strong style="color:#e2e8f0;font-size:0.95rem;">🏃 Move Your Body (15 min)</strong><p style="color:#94a3b8;font-size:0.85rem;margin-top:0.25rem;">Take a walk, stretch, dance, or do any activity you enjoy.</p></div>
+            <div id="checklistItems" style="margin-top: 0.75rem;">
+                <div class="checklist-item" data-item="move" onclick="toggleChecklistItem('move')" style="background: rgba(30,41,59,0.6); border: 1px solid #334155; border-radius: 10px; padding: 0.6rem 0.75rem; margin-bottom: 0.4rem; cursor: pointer; display: flex; gap: 0.6rem; align-items: center;">
+                    <div class="checklist-checkbox" style="width:20px;height:20px;min-width:20px;border:2px solid #64748b;border-radius:5px;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);"></div>
+                    <div style="flex:1"><strong style="color:#e2e8f0;font-size:0.85rem;">🏃 Move Your Body</strong><span style="color:#94a3b8;font-size:0.75rem;margin-left:0.5rem;">15 min walk, stretch, or dance</span></div>
                 </div>
-                <div class="checklist-item" data-item="breathe" onclick="toggleChecklistItem('breathe')" style="background: rgba(30,41,59,0.6); border: 1px solid #334155; border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; cursor: pointer; display: flex; gap: 1rem; align-items: flex-start;">
-                    <div class="checklist-checkbox" style="width:24px;height:24px;min-width:24px;border:2px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);"></div>
-                    <div style="flex:1"><strong style="color:#e2e8f0;font-size:0.95rem;">🧘 Mindful Break (3 min)</strong><p style="color:#94a3b8;font-size:0.85rem;margin-top:0.25rem;">Take a moment to breathe deeply and reset.</p></div>
+                <div class="checklist-item" data-item="breathe" onclick="toggleChecklistItem('breathe')" style="background: rgba(30,41,59,0.6); border: 1px solid #334155; border-radius: 10px; padding: 0.6rem 0.75rem; margin-bottom: 0.4rem; cursor: pointer; display: flex; gap: 0.6rem; align-items: center;">
+                    <div class="checklist-checkbox" style="width:20px;height:20px;min-width:20px;border:2px solid #64748b;border-radius:5px;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);"></div>
+                    <div style="flex:1"><strong style="color:#e2e8f0;font-size:0.85rem;">🧘 Mindful Break</strong><span style="color:#94a3b8;font-size:0.75rem;margin-left:0.5rem;">3 min breathing</span></div>
                 </div>
-                <div class="checklist-item" data-item="journal" onclick="toggleChecklistItem('journal')" style="background: rgba(30,41,59,0.6); border: 1px solid #334155; border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; cursor: pointer; display: flex; gap: 1rem; align-items: flex-start;">
-                    <div class="checklist-checkbox" style="width:24px;height:24px;min-width:24px;border:2px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);"></div>
-                    <div style="flex:1"><strong style="color:#e2e8f0;font-size:0.95rem;">📝 Daily Reflection</strong><p style="color:#94a3b8;font-size:0.85rem;margin-top:0.25rem;">Write down your thoughts and feelings.</p></div>
+                <div class="checklist-item" data-item="journal" onclick="toggleChecklistItem('journal')" style="background: rgba(30,41,59,0.6); border: 1px solid #334155; border-radius: 10px; padding: 0.6rem 0.75rem; margin-bottom: 0.4rem; cursor: pointer; display: flex; gap: 0.6rem; align-items: center;">
+                    <div class="checklist-checkbox" style="width:20px;height:20px;min-width:20px;border:2px solid #64748b;border-radius:5px;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);"></div>
+                    <div style="flex:1"><strong style="color:#e2e8f0;font-size:0.85rem;">📝 Daily Reflection</strong><span style="color:#94a3b8;font-size:0.75rem;margin-left:0.5rem;">Write your thoughts</span></div>
                 </div>
-                <div class="checklist-item" data-item="gratitude" onclick="toggleChecklistItem('gratitude')" style="background: rgba(30,41,59,0.6); border: 1px solid #334155; border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; cursor: pointer; display: flex; gap: 1rem; align-items: flex-start;">
-                    <div class="checklist-checkbox" style="width:24px;height:24px;min-width:24px;border:2px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);"></div>
-                    <div style="flex:1"><strong style="color:#e2e8f0;font-size:0.95rem;">🙏 Gratitude Moment</strong><p style="color:#94a3b8;font-size:0.85rem;margin-top:0.25rem;">Think of one thing you're grateful for today.</p></div>
+                <div class="checklist-item" data-item="gratitude" onclick="toggleChecklistItem('gratitude')" style="background: rgba(30,41,59,0.6); border: 1px solid #334155; border-radius: 10px; padding: 0.6rem 0.75rem; margin-bottom: 0.4rem; cursor: pointer; display: flex; gap: 0.6rem; align-items: center;">
+                    <div class="checklist-checkbox" style="width:20px;height:20px;min-width:20px;border:2px solid #64748b;border-radius:5px;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);"></div>
+                    <div style="flex:1"><strong style="color:#e2e8f0;font-size:0.85rem;">🙏 Gratitude Moment</strong><span style="color:#94a3b8;font-size:0.75rem;margin-left:0.5rem;">One thing you're thankful for</span></div>
                 </div>
-                <div class="checklist-item" data-item="kindness" onclick="toggleChecklistItem('kindness')" style="background: rgba(30,41,59,0.6); border: 1px solid #334155; border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; cursor: pointer; display: flex; gap: 1rem; align-items: flex-start;">
-                    <div class="checklist-checkbox" style="width:24px;height:24px;min-width:24px;border:2px solid #64748b;border-radius:6px;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);"></div>
-                    <div style="flex:1"><strong style="color:#e2e8f0;font-size:0.95rem;">💚 Spread Kindness</strong><p style="color:#94a3b8;font-size:0.85rem;margin-top:0.25rem;">Do something kind for yourself or others.</p></div>
+                <div class="checklist-item" data-item="kindness" onclick="toggleChecklistItem('kindness')" style="background: rgba(30,41,59,0.6); border: 1px solid #334155; border-radius: 10px; padding: 0.6rem 0.75rem; margin-bottom: 0.4rem; cursor: pointer; display: flex; gap: 0.6rem; align-items: center;">
+                    <div class="checklist-checkbox" style="width:20px;height:20px;min-width:20px;border:2px solid #64748b;border-radius:5px;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);"></div>
+                    <div style="flex:1"><strong style="color:#e2e8f0;font-size:0.85rem;">💚 Spread Kindness</strong><span style="color:#94a3b8;font-size:0.75rem;margin-left:0.5rem;">Do something kind</span></div>
                 </div>
             </div>
-            <div style="margin-top:1.5rem;padding:1rem;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:12px;text-align:center;">
-                <div id="checklistProgressText" style="color:#22c55e;font-size:1rem;font-weight:bold;">0 / 5 completed</div>
-                <div style="width:100%;height:8px;background:rgba(30,41,59,0.6);border-radius:4px;margin-top:0.5rem;overflow:hidden;"><div id="checklistProgressFill" style="height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:4px;width:0%;transition:width 0.3s ease;"></div></div>
+            <div style="margin-top:1rem;padding:0.75rem;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:10px;text-align:center;">
+                <div id="checklistProgressText" style="color:#22c55e;font-size:0.9rem;font-weight:bold;">0 / 5 completed</div>
+                <div style="width:100%;height:6px;background:rgba(30,41,59,0.6);border-radius:3px;margin-top:0.4rem;overflow:hidden;"><div id="checklistProgressFill" style="height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:3px;width:0%;transition:width 0.3s ease;"></div></div>
+                <div id="checklistComparison" style="margin-top:0.5rem;"></div>
             </div>
         </div>
     </div>
@@ -2291,6 +2292,7 @@
 
         function openChecklistModal() {
             loadChecklistState();
+            loadChecklistComparison();
             document.getElementById('checklistModal').classList.add('active');
         }
 
@@ -2381,7 +2383,7 @@
             updateChecklistProgress();
         }
 
-        function saveChecklistState() {
+        async function saveChecklistState() {
             if (!userId) return;
             const today = new Date().toDateString();
             const checklistKey = `mindmitra_checklist_${userId}_${today}`;
@@ -2390,6 +2392,25 @@
                 completedItems.push(item.getAttribute('data-item'));
             });
             localStorage.setItem(checklistKey, JSON.stringify(completedItems));
+
+            // Also save to database
+            try {
+                const response = await fetch('/api/checklist/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        completed_count: completedItems.length,
+                        completed_items: completedItems.join(',')
+                    })
+                });
+                const data = await response.json();
+                if (data.success && data.comparison) {
+                    updateComparisonDisplay(data.comparison);
+                }
+            } catch (error) {
+                console.error('Error saving checklist to database:', error);
+            }
         }
 
         function loadChecklistState() {
@@ -2417,6 +2438,51 @@
             if (progressFill) progressFill.style.width = `${(completedItems / totalItems) * 100}%`;
             if (completedItems === totalItems && totalItems > 0 && progressText) {
                 setTimeout(() => progressText.textContent = '🎉 Amazing! All tasks completed!', 300);
+            }
+        }
+
+        function updateComparisonDisplay(comparison) {
+            const comparisonDiv = document.getElementById('checklistComparison');
+            if (!comparisonDiv) return;
+
+            if (!comparison.has_yesterday) {
+                // No yesterday data - show encouraging message with today's count
+                if (comparison.today > 0) {
+                    comparisonDiv.innerHTML = `<p style="color:#60a5fa;font-size:0.9rem;">🌟 ${comparison.today}/5 today! Come back tomorrow to see your progress.</p>`;
+                } else {
+                    comparisonDiv.innerHTML = '<p style="color:#94a3b8;font-size:0.9rem;">Check off tasks to start tracking your progress!</p>';
+                }
+                return;
+            }
+
+            const diff = comparison.difference;
+            let message = '';
+            let color = '#94a3b8';
+
+            if (diff > 0) {
+                message = `📈 +${diff} from yesterday (${comparison.yesterday}/5 → ${comparison.today}/5) - Great job!`;
+                color = '#22c55e';
+            } else if (diff < 0) {
+                message = `📉 ${diff} from yesterday (${comparison.yesterday}/5 → ${comparison.today}/5) - You've got this!`;
+                color = '#f59e0b';
+            } else {
+                message = `➡️ Same as yesterday (${comparison.today}/5) - Keep it up!`;
+                color = '#60a5fa';
+            }
+
+            comparisonDiv.innerHTML = `<p style="color:${color};font-size:0.9rem;margin-top:0.5rem;">${message}</p>`;
+        }
+
+        async function loadChecklistComparison() {
+            if (!userId) return;
+            try {
+                const response = await fetch(`/api/checklist/comparison/${userId}`);
+                const data = await response.json();
+                if (data.comparison) {
+                    updateComparisonDisplay(data.comparison);
+                }
+            } catch (error) {
+                console.error('Error loading checklist comparison:', error);
             }
         }
 
