@@ -261,6 +261,11 @@ class DatabaseInterface(ABC):
         pass
 
     @abstractmethod
+    def apply_auto_freeze_if_needed(self, user_id: str, access_code: str) -> Dict[str, Any]:
+        """Apply auto-freeze if user missed a day but had a streak going"""
+        pass
+
+    @abstractmethod
     def get_badge_data(self, user_id: str) -> Dict[str, Any]:
         """Get user's badge data including total messaging days"""
         pass
@@ -2195,6 +2200,89 @@ class SQLiteDatabase(DatabaseInterface):
                 'can_freeze': False,
                 'error': str(e)
             }
+
+    def apply_auto_freeze_if_needed(self, user_id: str, access_code: str) -> Dict[str, Any]:
+        """
+        Automatically apply a freeze if:
+        1. User had activity 2+ days ago (had a streak going)
+        2. User has NO activity yesterday
+        3. User has NOT used their freeze this week yet
+        Returns info about whether a freeze was applied.
+        """
+        try:
+            from datetime import timedelta
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            today = get_india_today()
+            yesterday = today - timedelta(days=1)
+            two_days_ago = today - timedelta(days=2)
+
+            # Get Monday and Sunday of current week
+            current_day_of_week = today.weekday()
+            monday = today - timedelta(days=current_day_of_week)
+            sunday = monday + timedelta(days=6)
+
+            # Check if freeze already used this week
+            cursor.execute('''
+                SELECT COUNT(*) FROM streak_tracking
+                WHERE user_id = ? AND is_freeze = 1
+                AND activity_date >= ? AND activity_date <= ?
+            ''', (user_id, monday.isoformat(), sunday.isoformat()))
+
+            freeze_count = cursor.fetchone()[0]
+
+            if freeze_count >= 1:
+                # Already used freeze this week - no auto-freeze
+                conn.close()
+                return {'applied': False, 'reason': 'freeze_already_used'}
+
+            # Check yesterday's activity
+            cursor.execute('''
+                SELECT message_count, is_freeze FROM streak_tracking
+                WHERE user_id = ? AND activity_date = ?
+            ''', (user_id, yesterday.isoformat()))
+
+            yesterday_record = cursor.fetchone()
+
+            # If yesterday has activity (messages or freeze), no need to auto-freeze
+            if yesterday_record and (yesterday_record[0] >= 1 or yesterday_record[1]):
+                conn.close()
+                return {'applied': False, 'reason': 'has_activity_yesterday'}
+
+            # Check if user had activity 2 days ago (streak was going)
+            cursor.execute('''
+                SELECT message_count, is_freeze FROM streak_tracking
+                WHERE user_id = ? AND activity_date = ?
+            ''', (user_id, two_days_ago.isoformat()))
+
+            two_days_record = cursor.fetchone()
+
+            # If no activity 2 days ago, there was no streak to protect
+            if not two_days_record or (two_days_record[0] < 1 and not two_days_record[1]):
+                conn.close()
+                return {'applied': False, 'reason': 'no_streak_to_protect'}
+
+            # Apply auto-freeze for yesterday
+            cursor.execute('''
+                INSERT INTO streak_tracking (user_id, access_code, activity_date, message_count, is_freeze)
+                VALUES (?, ?, ?, 0, 1)
+                ON CONFLICT(user_id, activity_date)
+                DO UPDATE SET is_freeze = 1
+            ''', (user_id, access_code, yesterday.isoformat()))
+
+            conn.commit()
+            conn.close()
+
+            return {
+                'applied': True,
+                'freeze_date': yesterday.isoformat(),
+                'message': 'Auto-freeze applied for yesterday'
+            }
+
+        except Exception as e:
+            logger.error(f"Error applying auto-freeze: {e}")
+            return {'applied': False, 'reason': 'error', 'error': str(e)}
 
     def track_email_open(self, tracking_id: str, ip_address: str, user_agent: str) -> bool:
         """Track email open event - SQLite stub"""
@@ -4504,6 +4592,93 @@ class PostgreSQLDatabase(DatabaseInterface):
                 'error': str(e)
             }
 
+    def apply_auto_freeze_if_needed(self, user_id: str, access_code: str) -> Dict[str, Any]:
+        """
+        Automatically apply a freeze if:
+        1. User had activity 2+ days ago (had a streak going)
+        2. User has NO activity yesterday
+        3. User has NOT used their freeze this week yet
+        Returns info about whether a freeze was applied.
+        """
+        try:
+            from datetime import timedelta
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            today = get_india_today()
+            yesterday = today - timedelta(days=1)
+            two_days_ago = today - timedelta(days=2)
+
+            # Get Monday and Sunday of current week
+            current_day_of_week = today.weekday()
+            monday = today - timedelta(days=current_day_of_week)
+            sunday = monday + timedelta(days=6)
+
+            # Check if freeze already used this week
+            cursor.execute('''
+                SELECT COUNT(*) FROM streak_tracking
+                WHERE user_id = %s AND is_freeze = TRUE
+                AND activity_date >= %s AND activity_date <= %s
+            ''', (user_id, monday.isoformat(), sunday.isoformat()))
+
+            freeze_count = cursor.fetchone()[0]
+
+            if freeze_count >= 1:
+                # Already used freeze this week - no auto-freeze
+                cursor.close()
+                self._return_connection(conn)
+                return {'applied': False, 'reason': 'freeze_already_used'}
+
+            # Check yesterday's activity
+            cursor.execute('''
+                SELECT message_count, is_freeze FROM streak_tracking
+                WHERE user_id = %s AND activity_date = %s
+            ''', (user_id, yesterday.isoformat()))
+
+            yesterday_record = cursor.fetchone()
+
+            # If yesterday has activity (messages or freeze), no need to auto-freeze
+            if yesterday_record and (yesterday_record[0] >= 1 or yesterday_record[1]):
+                cursor.close()
+                self._return_connection(conn)
+                return {'applied': False, 'reason': 'has_activity_yesterday'}
+
+            # Check if user had activity 2 days ago (streak was going)
+            cursor.execute('''
+                SELECT message_count, is_freeze FROM streak_tracking
+                WHERE user_id = %s AND activity_date = %s
+            ''', (user_id, two_days_ago.isoformat()))
+
+            two_days_record = cursor.fetchone()
+
+            # If no activity 2 days ago, there was no streak to protect
+            if not two_days_record or (two_days_record[0] < 1 and not two_days_record[1]):
+                cursor.close()
+                self._return_connection(conn)
+                return {'applied': False, 'reason': 'no_streak_to_protect'}
+
+            # Apply auto-freeze for yesterday
+            cursor.execute('''
+                INSERT INTO streak_tracking (user_id, access_code, activity_date, message_count, is_freeze)
+                VALUES (%s, %s, %s, 0, TRUE)
+                ON CONFLICT(user_id, activity_date)
+                DO UPDATE SET is_freeze = TRUE
+            ''', (user_id, access_code, yesterday.isoformat()))
+
+            conn.commit()
+            cursor.close()
+            self._return_connection(conn)
+
+            return {
+                'applied': True,
+                'freeze_date': yesterday.isoformat(),
+                'message': 'Auto-freeze applied for yesterday'
+            }
+
+        except Exception as e:
+            logger.error(f"Error applying auto-freeze: {e}")
+            return {'applied': False, 'reason': 'error', 'error': str(e)}
+
     def track_email_open(self, tracking_id: str, ip_address: str, user_agent: str) -> bool:
         """Track email open event"""
         try:
@@ -4864,6 +5039,10 @@ class DatabaseManager:
     def get_freeze_status(self, user_id: str) -> Dict[str, Any]:
         """Get information about user's freeze usage this week"""
         return self.database.get_freeze_status(user_id)
+
+    def apply_auto_freeze_if_needed(self, user_id: str, access_code: str) -> Dict[str, Any]:
+        """Apply auto-freeze if user missed a day but had a streak going"""
+        return self.database.apply_auto_freeze_if_needed(user_id, access_code)
 
     def get_badge_data(self, user_id: str) -> Dict[str, Any]:
         """Get user's badge data including total messaging days"""
