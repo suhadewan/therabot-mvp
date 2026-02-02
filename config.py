@@ -17,7 +17,7 @@ class Config:
     MODEL_NAME = os.getenv("THERABOT_MODEL_NAME", "ft:gpt-4o-mini-2024-07-18:personal:mindmitra:CzDQPAeV")
                         #    "ft:gpt-4o-mini-2024-07-18:personal:mindmitra:CG4e85Er")
     MODEL_TEMPERATURE = float(
-        os.getenv("THERABOT_MODEL_TEMPERATURE", 0.7)
+        os.getenv("THERABOT_MODEL_TEMPERATURE", 0.5)  # Lowered from 0.7 to reduce random topic switches
     )
     MODEL_MAX_TOKENS = int(
         os.getenv("THERABOT_MODEL_MAX_TOKENS", 200)  # Increased for more helpful responses
