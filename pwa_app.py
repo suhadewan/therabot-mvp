@@ -1791,6 +1791,54 @@ def get_feeling_history(user_id):
         print(f"Error getting feeling history: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
+@app.route('/api/checklist/save', methods=['POST'])
+def save_checklist():
+    """Save user's checklist progress for today"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', '').strip()
+        completed_count = data.get('completed_count', 0)
+        completed_items = data.get('completed_items', '')  # comma-separated list
+
+        if not user_id:
+            return jsonify({"success": False, "error": "User ID required"}), 400
+
+        db = get_database()
+        success = db.save_checklist_progress(user_id, user_id, completed_count, completed_items)
+
+        if success:
+            # Get comparison data
+            comparison = db.get_checklist_comparison(user_id)
+            return jsonify({
+                "success": True,
+                "comparison": comparison
+            })
+        else:
+            return jsonify({"success": False, "error": "Failed to save checklist"}), 500
+
+    except Exception as e:
+        print(f"Error saving checklist: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/checklist/comparison/<user_id>')
+def get_checklist_comparison(user_id):
+    """Get today's and yesterday's checklist for comparison"""
+    try:
+        db = get_database()
+        comparison = db.get_checklist_comparison(user_id)
+        today_data = db.get_checklist_for_today(user_id)
+
+        return jsonify({
+            "comparison": comparison,
+            "today": today_data
+        })
+
+    except Exception as e:
+        print(f"Error getting checklist comparison: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
 @app.route('/api/memory/summary/generate', methods=['POST'])
 def generate_summary():
     """Manually trigger summary generation for a user"""

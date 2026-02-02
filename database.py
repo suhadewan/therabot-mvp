@@ -155,6 +155,21 @@ class DatabaseInterface(ABC):
         pass
 
     @abstractmethod
+    def save_checklist_progress(self, user_id: str, access_code: str, completed_count: int, completed_items: str) -> bool:
+        """Save today's checklist progress"""
+        pass
+
+    @abstractmethod
+    def get_checklist_for_today(self, user_id: str) -> Dict[str, Any]:
+        """Get today's checklist record for a user"""
+        pass
+
+    @abstractmethod
+    def get_checklist_comparison(self, user_id: str) -> Dict[str, Any]:
+        """Get today's and yesterday's checklist for comparison"""
+        pass
+
+    @abstractmethod
     def save_conversation_summary(self, user_id: str, access_code: str, summary_date: str,
                                   main_concerns: str = None, emotional_patterns: str = None,
                                   coping_strategies: str = None, progress_notes: str = None,
@@ -400,6 +415,21 @@ class SQLiteDatabase(DatabaseInterface):
                     user_id TEXT NOT NULL,
                     access_code TEXT NOT NULL,
                     feeling_score INTEGER NOT NULL CHECK (feeling_score >= 0 AND feeling_score <= 10),
+                    date DATE NOT NULL DEFAULT (DATE('now')),
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (access_code) REFERENCES access_codes (code),
+                    UNIQUE(access_code, date)
+                )
+            ''')
+
+            # Create checklist tracking table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS checklist_tracking (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL,
+                    access_code TEXT NOT NULL,
+                    completed_count INTEGER NOT NULL CHECK (completed_count >= 0 AND completed_count <= 5),
+                    completed_items TEXT,
                     date DATE NOT NULL DEFAULT (DATE('now')),
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (access_code) REFERENCES access_codes (code),
@@ -1302,6 +1332,91 @@ class SQLiteDatabase(DatabaseInterface):
             logger.error(f"Error getting feeling history: {e}")
             return []
 
+    def save_checklist_progress(self, user_id: str, access_code: str, completed_count: int, completed_items: str) -> bool:
+        """Save today's checklist progress to SQLite"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                INSERT OR REPLACE INTO checklist_tracking
+                (user_id, access_code, completed_count, completed_items, date, timestamp)
+                VALUES (?, ?, ?, ?, DATE('now'), CURRENT_TIMESTAMP)
+            ''', (user_id, access_code, completed_count, completed_items))
+
+            conn.commit()
+            conn.close()
+            return True
+
+        except Exception as e:
+            logger.error(f"Error saving checklist progress: {e}")
+            return False
+
+    def get_checklist_for_today(self, user_id: str) -> Dict[str, Any]:
+        """Get today's checklist record from SQLite"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT completed_count, completed_items, date, timestamp
+                FROM checklist_tracking
+                WHERE user_id = ? AND date = DATE('now')
+            ''', (user_id,))
+
+            row = cursor.fetchone()
+            conn.close()
+
+            if row:
+                return {
+                    'completed_count': row[0],
+                    'completed_items': row[1],
+                    'date': row[2],
+                    'timestamp': row[3],
+                    'recorded_today': True
+                }
+            return {'recorded_today': False, 'completed_count': 0}
+
+        except Exception as e:
+            logger.error(f"Error getting today's checklist: {e}")
+            return {'recorded_today': False, 'completed_count': 0}
+
+    def get_checklist_comparison(self, user_id: str) -> Dict[str, Any]:
+        """Get today's and yesterday's checklist for comparison from SQLite"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Get today's checklist
+            cursor.execute('''
+                SELECT completed_count, completed_items FROM checklist_tracking
+                WHERE user_id = ? AND date = DATE('now')
+            ''', (user_id,))
+            today_row = cursor.fetchone()
+
+            # Get yesterday's checklist
+            cursor.execute('''
+                SELECT completed_count, completed_items FROM checklist_tracking
+                WHERE user_id = ? AND date = DATE('now', '-1 day')
+            ''', (user_id,))
+            yesterday_row = cursor.fetchone()
+
+            conn.close()
+
+            today_count = today_row[0] if today_row else 0
+            yesterday_count = yesterday_row[0] if yesterday_row else None
+
+            return {
+                'today': today_count,
+                'yesterday': yesterday_count,
+                'difference': today_count - yesterday_count if yesterday_count is not None else None,
+                'has_yesterday': yesterday_count is not None
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting checklist comparison: {e}")
+            return {'today': 0, 'yesterday': None, 'difference': None, 'has_yesterday': False}
+
     def save_conversation_summary(self, user_id: str, access_code: str, summary_date: str,
                                   main_concerns: str = None, emotional_patterns: str = None,
                                   coping_strategies: str = None, progress_notes: str = None,
@@ -1798,10 +1913,10 @@ class SQLiteDatabase(DatabaseInterface):
             from datetime import timedelta
             check_date = today
 
-            # Parse records: only count days with 5+ messages OR frozen days
-            # activity_dates = days that count toward streak (5+ messages or frozen)
+            # Parse records: only count days with 1+ messages OR frozen days
+            # activity_dates = days that count toward streak (1+ messages or frozen)
             activity_dates = [datetime.fromisoformat(record[0]).date() for record in activity_records
-                            if record[1] >= 5 or record[2]]  # message_count >= 5 OR is_freeze
+                            if record[1] >= 1 or record[2]]  # message_count >= 1 OR is_freeze
             frozen_days_set = {datetime.fromisoformat(record[0]).date() for record in activity_records if record[2]}
             # Also count all messaging days (any message count > 0) for badges
             all_messaging_dates = [datetime.fromisoformat(record[0]).date() for record in activity_records
@@ -2378,6 +2493,21 @@ class PostgreSQLDatabase(DatabaseInterface):
                 )
             ''')
 
+            # Checklist tracking table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS checklist_tracking (
+                    id SERIAL PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    access_code TEXT NOT NULL,
+                    completed_count INTEGER NOT NULL CHECK (completed_count >= 0 AND completed_count <= 5),
+                    completed_items TEXT,
+                    date DATE NOT NULL DEFAULT CURRENT_DATE,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (access_code) REFERENCES access_codes (code),
+                    UNIQUE(access_code, date)
+                )
+            ''')
+
             # Conversation summaries table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS conversation_summaries (
@@ -2609,6 +2739,21 @@ class PostgreSQLDatabase(DatabaseInterface):
                     user_id TEXT NOT NULL,
                     access_code TEXT NOT NULL,
                     feeling_score INTEGER NOT NULL CHECK (feeling_score >= 0 AND feeling_score <= 10),
+                    date DATE NOT NULL DEFAULT CURRENT_DATE,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (access_code) REFERENCES access_codes (code),
+                    UNIQUE(access_code, date)
+                )
+            ''')
+
+            # Create checklist tracking table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS checklist_tracking (
+                    id SERIAL PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    access_code TEXT NOT NULL,
+                    completed_count INTEGER NOT NULL CHECK (completed_count >= 0 AND completed_count <= 5),
+                    completed_items TEXT,
                     date DATE NOT NULL DEFAULT CURRENT_DATE,
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (access_code) REFERENCES access_codes (code),
@@ -3474,6 +3619,103 @@ class PostgreSQLDatabase(DatabaseInterface):
             logger.error(f"Error getting feeling history: {e}")
             return []
 
+    def save_checklist_progress(self, user_id: str, access_code: str, completed_count: int, completed_items: str) -> bool:
+        """Save today's checklist progress to PostgreSQL"""
+        conn = None
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                INSERT INTO checklist_tracking (user_id, access_code, completed_count, completed_items, date, timestamp)
+                VALUES (%s, %s, %s, %s, CURRENT_DATE, CURRENT_TIMESTAMP)
+                ON CONFLICT (access_code, date)
+                DO UPDATE SET completed_count = EXCLUDED.completed_count,
+                              completed_items = EXCLUDED.completed_items,
+                              timestamp = CURRENT_TIMESTAMP
+            ''', (user_id, access_code, completed_count, completed_items))
+
+            conn.commit()
+            self._return_connection(conn)
+            return True
+
+        except Exception as e:
+            logger.error(f"Error saving checklist progress: {e}")
+            if conn:
+                self._return_connection(conn)
+            return False
+
+    def get_checklist_for_today(self, user_id: str) -> Dict[str, Any]:
+        """Get today's checklist record from PostgreSQL"""
+        conn = None
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT completed_count, completed_items, date, timestamp
+                FROM checklist_tracking
+                WHERE user_id = %s AND date = CURRENT_DATE
+            ''', (user_id,))
+
+            row = cursor.fetchone()
+            self._return_connection(conn)
+
+            if row:
+                return {
+                    'completed_count': row[0],
+                    'completed_items': row[1],
+                    'date': row[2],
+                    'timestamp': row[3],
+                    'recorded_today': True
+                }
+            return {'recorded_today': False, 'completed_count': 0}
+
+        except Exception as e:
+            logger.error(f"Error getting today's checklist: {e}")
+            if conn:
+                self._return_connection(conn)
+            return {'recorded_today': False, 'completed_count': 0}
+
+    def get_checklist_comparison(self, user_id: str) -> Dict[str, Any]:
+        """Get today's and yesterday's checklist for comparison from PostgreSQL"""
+        conn = None
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Get today's checklist
+            cursor.execute('''
+                SELECT completed_count, completed_items FROM checklist_tracking
+                WHERE user_id = %s AND date = CURRENT_DATE
+            ''', (user_id,))
+            today_row = cursor.fetchone()
+
+            # Get yesterday's checklist
+            cursor.execute('''
+                SELECT completed_count, completed_items FROM checklist_tracking
+                WHERE user_id = %s AND date = CURRENT_DATE - INTERVAL '1 day'
+            ''', (user_id,))
+            yesterday_row = cursor.fetchone()
+
+            self._return_connection(conn)
+
+            today_count = today_row[0] if today_row else 0
+            yesterday_count = yesterday_row[0] if yesterday_row else None
+
+            return {
+                'today': today_count,
+                'yesterday': yesterday_count,
+                'difference': today_count - yesterday_count if yesterday_count is not None else None,
+                'has_yesterday': yesterday_count is not None
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting checklist comparison: {e}")
+            if conn:
+                self._return_connection(conn)
+            return {'today': 0, 'yesterday': None, 'difference': None, 'has_yesterday': False}
+
     def save_conversation_summary(self, user_id: str, access_code: str, summary_date: str,
                                   main_concerns: str = None, emotional_patterns: str = None,
                                   coping_strategies: str = None, progress_notes: str = None,
@@ -3963,10 +4205,10 @@ class PostgreSQLDatabase(DatabaseInterface):
             current_streak = 0
             today = get_india_today()
 
-            # Parse records: only count days with 5+ messages OR frozen days
-            # activity_dates = days that count toward streak (5+ messages or frozen)
+            # Parse records: only count days with 1+ messages OR frozen days
+            # activity_dates = days that count toward streak (1+ messages or frozen)
             activity_dates = [record[0] if isinstance(record[0], datetime) else datetime.fromisoformat(str(record[0])).date()
-                            for record in activity_records if record[1] >= 5 or record[2]]  # message_count >= 5 OR is_freeze
+                            for record in activity_records if record[1] >= 1 or record[2]]  # message_count >= 1 OR is_freeze
             frozen_days_set = {(record[0] if isinstance(record[0], datetime) else datetime.fromisoformat(str(record[0])).date()) for record in activity_records if record[2]}
             # Also count all messaging days (any message count > 0) for badges
             all_messaging_dates = [record[0] if isinstance(record[0], datetime) else datetime.fromisoformat(str(record[0])).date()
@@ -4532,6 +4774,18 @@ class DatabaseManager:
     def get_user_feeling_history(self, user_id: str, days: int = 30) -> List[Dict[str, Any]]:
         """Get user's feeling history for the last N days"""
         return self.database.get_user_feeling_history(user_id, days)
+
+    def save_checklist_progress(self, user_id: str, access_code: str, completed_count: int, completed_items: str) -> bool:
+        """Save today's checklist progress"""
+        return self.database.save_checklist_progress(user_id, access_code, completed_count, completed_items)
+
+    def get_checklist_for_today(self, user_id: str) -> Dict[str, Any]:
+        """Get today's checklist record for a user"""
+        return self.database.get_checklist_for_today(user_id)
+
+    def get_checklist_comparison(self, user_id: str) -> Dict[str, Any]:
+        """Get today's and yesterday's checklist for comparison"""
+        return self.database.get_checklist_comparison(user_id)
 
     def save_conversation_summary(self, user_id: str, access_code: str, summary_date: str,
                                   main_concerns: str = None, emotional_patterns: str = None,
