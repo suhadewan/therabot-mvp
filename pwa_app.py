@@ -1917,7 +1917,16 @@ def get_streak(user_id):
             return jsonify({"error": "User ID is required"}), 400
 
         db = get_database()
+
+        # Apply auto-freeze if user missed yesterday but had a streak going
+        auto_freeze_result = db.apply_auto_freeze_if_needed(user_id, user_id)
+
         streak_data = db.get_streak_data(user_id)
+
+        # Include auto-freeze info in response
+        if auto_freeze_result.get('applied'):
+            streak_data['auto_freeze_applied'] = True
+            streak_data['auto_freeze_date'] = auto_freeze_result.get('freeze_date')
 
         return jsonify({
             "success": True,
