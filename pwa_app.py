@@ -296,19 +296,18 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
         db.save_chat_message(user_id, access_code, "user", message_text)
         log_timing("User message saved")
 
-        # Update streak in background thread (non-blocking) - ONLY for full feature group
-        # Basic users don't have streak tracking to reduce DB operations
-        if feature_group == 'full':
-            def update_streak_background():
-                try:
-                    db = get_database()
-                    db.update_streak(user_id, access_code)
-                    print(f"DEBUG: Streak message count incremented for user {user_id}")
-                except Exception as e:
-                    print(f"Error updating streak in background: {e}")
+        # Update streak/activity tracking in background thread (non-blocking)
+        # All users need this for badge progress tracking
+        def update_streak_background():
+            try:
+                db = get_database()
+                db.update_streak(user_id, access_code)
+                print(f"DEBUG: Activity/streak tracked for user {user_id}")
+            except Exception as e:
+                print(f"Error updating streak in background: {e}")
 
-            streak_thread = threading.Thread(target=update_streak_background, daemon=True)
-            streak_thread.start()
+        streak_thread = threading.Thread(target=update_streak_background, daemon=True)
+        streak_thread.start()
 
     except Exception as e:
         print(f"Error saving user message: {e}")
