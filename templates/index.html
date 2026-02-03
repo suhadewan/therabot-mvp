@@ -160,6 +160,129 @@
             transform: scale(1.05);
         }
 
+        /* Help Button */
+        .help-button {
+            position: absolute;
+            top: 1rem;
+            right: 9.5rem;
+            background: var(--secondary);
+            border: 1px solid var(--border);
+            color: var(--foreground);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .help-button:hover {
+            background: var(--accent);
+            transform: scale(1.05);
+        }
+
+        /* Help Modal */
+        .help-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .help-modal-overlay.show {
+            display: flex;
+        }
+
+        .help-modal {
+            background: var(--card);
+            border-radius: 16px;
+            max-width: 450px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border);
+        }
+
+        .help-modal-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--background-secondary);
+            border-radius: 16px 16px 0 0;
+        }
+
+        .help-modal-header h2 {
+            color: var(--foreground);
+            font-size: 1.25rem;
+            margin: 0;
+        }
+
+        .help-modal-close {
+            background: none;
+            border: none;
+            color: var(--muted-foreground);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .help-modal-close:hover {
+            color: var(--foreground);
+        }
+
+        .help-modal-content {
+            padding: 1.25rem;
+        }
+
+        .help-item {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .help-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .help-item-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+            width: 40px;
+            text-align: center;
+        }
+
+        .help-item-text h3 {
+            color: var(--foreground);
+            font-size: 1rem;
+            margin: 0 0 0.35rem 0;
+        }
+
+        .help-item-text p {
+            color: var(--muted-foreground);
+            font-size: 0.9rem;
+            margin: 0;
+            line-height: 1.5;
+        }
+
         .feature-buttons-container {
             position: absolute;
             top: 1rem;
@@ -813,6 +936,13 @@
                 font-size: 1rem;
             }
 
+            .help-button {
+                right: 7.5rem;
+                width: 36px;
+                height: 36px;
+                font-size: 0.95rem;
+            }
+
             .safety-footer {
                 position: fixed;
                 bottom: 0;
@@ -1394,6 +1524,13 @@
                 height: 32px;
                 font-size: 0.9rem;
             }
+
+            .help-button {
+                right: 6.5rem;
+                width: 32px;
+                height: 32px;
+                font-size: 0.85rem;
+            }
         }
 
         /* Extra small phones */
@@ -1481,10 +1618,11 @@
                 </button>
             </div>
             <h1>
-                <img src="/logo.jpeg" alt="MindMitra Logo" class="header-logo">
+                <img src="/logo.jpeg" alt="MindMitra Logo" class="header-logo" id="headerLogo">
                 MindMitra
             </h1>
             <p>Your mental health companion and guide</p>
+            <button class="help-button" id="helpButton" onclick="openHelpModal()" title="App Info">?</button>
             <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
                 <i class="fas fa-sun" id="themeIcon"></i>
             </button>
@@ -1571,6 +1709,19 @@
     <!-- Safety Footer -->
     <div class="safety-footer">
         ⚠️ <strong>Important Notice</strong>: This is a non-clinical support tool for general mental wellness. If you're experiencing a crisis, please refer to the emergency helplines.
+    </div>
+
+    <!-- Help Modal -->
+    <div class="help-modal-overlay" id="helpModal" onclick="closeHelpModalOnOverlay(event)">
+        <div class="help-modal">
+            <div class="help-modal-header">
+                <h2>App Features</h2>
+                <button class="help-modal-close" onclick="closeHelpModal()">&times;</button>
+            </div>
+            <div class="help-modal-content" id="helpModalContent">
+                <!-- Content populated by JavaScript based on feature group -->
+            </div>
+        </div>
     </div>
 
     <!-- Streak Modal -->
@@ -1689,7 +1840,7 @@
         let deferredPrompt;
         let userId = null;
         let selectedFeeling = null;
-        let userFeatureGroup = 'full';  // Default to 'full' group
+        let userFeatureGroup = null;  // Set from API response
 
         // Theme Toggle Functions
         function initTheme() {
@@ -1700,9 +1851,11 @@
             if (savedTheme === 'light') {
                 document.body.classList.remove('dark');
                 updateThemeIcon(false);
+                updateLogo(false);
             } else {
                 document.body.classList.add('dark');
                 updateThemeIcon(true);
+                updateLogo(true);
             }
         }
 
@@ -1710,6 +1863,7 @@
             const isDark = document.body.classList.toggle('dark');
             localStorage.setItem('mindmitra_theme', isDark ? 'dark' : 'light');
             updateThemeIcon(isDark);
+            updateLogo(isDark);
 
             // Update meta theme-color for PWA
             const metaTheme = document.querySelector('meta[name="theme-color"]');
@@ -1722,6 +1876,13 @@
             const icon = document.getElementById('themeIcon');
             if (icon) {
                 icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+            }
+        }
+
+        function updateLogo(isDark) {
+            const logo = document.getElementById('headerLogo');
+            if (logo) {
+                logo.src = isDark ? '/logo.jpeg' : '/static/logo_light.jpeg';
             }
         }
 
@@ -2635,6 +2796,77 @@
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
+        }
+
+        // Help Modal Functions
+        function openHelpModal() {
+            const modal = document.getElementById('helpModal');
+            const content = document.getElementById('helpModalContent');
+
+            // Get current feature group (check variable first, then localStorage)
+            const currentFeatureGroup = userFeatureGroup || localStorage.getItem('mindmitra_feature_group') || 'basic';
+            const isFullAccess = currentFeatureGroup === 'full';
+
+            // Build content based on feature group
+            let html = `
+                <div class="help-item">
+                    <div class="help-item-icon">🌡️</div>
+                    <div class="help-item-text">
+                        <h3>Thermometer</h3>
+                        <p>Record your mood here to help MindMitra understand how you feel today.</p>
+                    </div>
+                </div>
+            `;
+
+            // Streak only for full access
+            if (isFullAccess) {
+                html += `
+                    <div class="help-item">
+                        <div class="help-item-icon">🔥</div>
+                        <div class="help-item-text">
+                            <h3>Streak</h3>
+                            <p>A streak is how many days in a row you text MindMitra. You get a free streak freeze every week to keep it from breaking if you miss one day.</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `
+                <div class="help-item">
+                    <div class="help-item-icon">✅</div>
+                    <div class="help-item-text">
+                        <h3>Checklist</h3>
+                        <p>This is a daily self-care checklist with simple activities to help you feel better. You can check off completed tasks each day and review the previous day's checklist.</p>
+                    </div>
+                </div>
+                <div class="help-item">
+                    <div class="help-item-icon">🏅</div>
+                    <div class="help-item-text">
+                        <h3>Progress Badge</h3>
+                        <p>This progress badge turns on when you complete 15 days of texting MindMitra! Complete this badge to earn ₹100.</p>
+                    </div>
+                </div>
+                <div class="help-item">
+                    <div class="help-item-icon">🌙 / ☀️</div>
+                    <div class="help-item-text">
+                        <h3>Dark / Light Mode</h3>
+                        <p>Toggle between dark or light mode for comfortable viewing.</p>
+                    </div>
+                </div>
+            `;
+
+            content.innerHTML = html;
+            modal.classList.add('show');
+        }
+
+        function closeHelpModal() {
+            document.getElementById('helpModal').classList.remove('show');
+        }
+
+        function closeHelpModalOnOverlay(event) {
+            if (event.target.id === 'helpModal') {
+                closeHelpModal();
+            }
         }
 
         function openStreakModal() {
