@@ -2077,6 +2077,8 @@
             // Streaks only for full group
             if (featureGroup === 'full') {
                 document.getElementById('streakHeaderButton').style.display = 'flex';
+                // Load streak data on page load to trigger auto-freeze if needed
+                loadStreakData();
             } else {
                 document.getElementById('streakHeaderButton').style.display = 'none';
             }
