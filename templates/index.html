@@ -861,13 +861,14 @@
                 padding-bottom: 3.5rem;
             }
 
+            /* Feature buttons on left side of bottom row */
             .feature-buttons-container {
                 position: absolute;
                 top: auto;
                 bottom: 0.5rem;
-                left: 50%;
-                transform: translateX(-50%);
-                gap: 0.4rem;
+                left: 0.5rem;
+                transform: none;
+                gap: 0.25rem;
                 align-items: center;
             }
 
@@ -875,10 +876,10 @@
             .streak-header-button,
             .checklist-header-button,
             .badge-header-button {
-                padding: 0.4rem 0.5rem;
+                padding: 0.3rem 0.4rem;
                 font-size: 0.8rem;
                 border-radius: 8px;
-                height: 36px;
+                height: 32px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -893,16 +894,16 @@
             .feelings-icon,
             .streak-icon,
             .checklist-icon {
-                font-size: 1.1rem;
+                font-size: 1rem;
             }
 
             .badge-header-button {
-                padding: 0.3rem;
+                padding: 0.25rem;
             }
 
             .badge-header-button img {
-                width: 28px;
-                height: 28px;
+                width: 24px;
+                height: 24px;
             }
 
             .chat-container {
@@ -929,18 +930,40 @@
                 margin: 0;
             }
 
+            /* Move utility buttons to same row as feature buttons, but on the right */
             .theme-toggle {
-                right: 4.5rem;
-                width: 36px;
-                height: 36px;
-                font-size: 1rem;
+                position: absolute;
+                top: auto;
+                bottom: 0.5rem;
+                right: 5.5rem;
+                width: 32px;
+                height: 32px;
+                font-size: 0.9rem;
             }
 
             .help-button {
-                right: 7.5rem;
-                width: 36px;
-                height: 36px;
-                font-size: 0.95rem;
+                position: absolute;
+                top: auto;
+                bottom: 0.5rem;
+                right: 3rem;
+                width: 32px;
+                height: 32px;
+                font-size: 0.85rem;
+            }
+
+            .hamburger-button {
+                position: absolute;
+                top: auto;
+                bottom: 0.5rem;
+                right: 0.5rem;
+                width: 32px;
+                height: 32px;
+                font-size: 1rem;
+                padding: 0;
+            }
+
+            .logout-button {
+                display: none;
             }
 
             .safety-footer {
