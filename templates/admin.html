@@ -573,7 +573,7 @@
 <body>
     <div class="header">
         <h1>🧠 MindMitra Admin Dashboard</h1>
-        <p>Monitor flagged chats and system statistics</p>
+        <p>Study analytics and access code management</p>
         <div class="admin-controls">
             <span id="adminInfo" class="admin-info">Loading...</span>
             <button onclick="adminLogout()" class="logout-btn">Logout</button>
@@ -586,23 +586,18 @@
         </div>
 
         <div class="tabs">
-            <button class="tab active" onclick="showTab('flagged-chats')">🚨 Flagged Chats</button>
+            <button class="tab active" onclick="showTab('study-analytics')">📊 Study Analytics</button>
             <button class="tab" onclick="showTab('access-codes')">🔑 Access Codes</button>
         </div>
 
-        <!-- Flagged Chats Tab -->
-        <div id="flagged-chats" class="tab-content active">
+        <!-- Study Analytics Tab -->
+        <div id="study-analytics" class="tab-content active">
             <div class="flagged-chats">
                 <div class="section-header">
-                    <h2>🚨 Flagged Chats</h2>
+                    <h2>📊 MindMitra Study Analytics</h2>
                 </div>
-                <div class="chat-list" id="chatList">
-                    <div class="loading">Loading flagged chats...</div>
-                </div>
-                <div class="pagination" id="pagination" style="display: none;">
-                    <button onclick="previousPage()" id="prevBtn">Previous</button>
-                    <span class="current-page" id="currentPage">Page 1</span>
-                    <button onclick="nextPage()" id="nextBtn">Next</button>
+                <div id="studyAnalytics" style="padding: 1.5rem;">
+                    <div class="loading">Loading study analytics...</div>
                 </div>
             </div>
         </div>
@@ -745,108 +740,147 @@
             window.location.href = '/admin-login';
         }
 
-        // Load statistics
-        async function loadStats() {
+        // Load study analytics
+        async function loadStudyAnalytics() {
             try {
-                const response = await fetch('/admin/stats');
-                const stats = await response.json();
-                
+                const response = await fetch('/admin/study-analytics');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Update stats grid (top summary cards)
                 const statsGrid = document.getElementById('statsGrid');
                 statsGrid.innerHTML = `
                     <div class="stat-card">
-                        <div class="stat-number">${stats.total_flagged || 0}</div>
-                        <div class="stat-label">Total Flagged Chats</div>
+                        <div class="stat-number">${data.consent?.accepted || 0}</div>
+                        <div class="stat-label">Users Consented</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number">${stats.recent_24h || 0}</div>
-                        <div class="stat-label">Last 24 Hours</div>
+                        <div class="stat-number">${data.engagement?.users_with_messages || 0}</div>
+                        <div class="stat-label">Users Sent Messages</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number">${stats.recent_7d || 0}</div>
-                        <div class="stat-label">Last 7 Days</div>
+                        <div class="stat-number">${data.engagement?.active_last_7_days || 0}</div>
+                        <div class="stat-label">Active Last 7 Days</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number">${stats.database_type || 'Unknown'}</div>
-                        <div class="stat-label">Database Type</div>
+                        <div class="stat-number">${data.flags?.total || 0}</div>
+                        <div class="stat-label">Total Flags</div>
+                    </div>
+                `;
+
+                // Update detailed analytics section
+                const analyticsDiv = document.getElementById('studyAnalytics');
+
+                const flagsByType = data.flags?.by_type || {};
+                const flagTypesHtml = Object.entries(flagsByType).length > 0
+                    ? Object.entries(flagsByType).map(([type, count]) =>
+                        `<span class="flag-type ${type.toLowerCase()}" style="margin-right: 0.5rem;">${type}: ${count}</span>`
+                    ).join('')
+                    : '<span style="color: #6b7280;">No flags yet</span>';
+
+                const reviewers = data.reviewers || {};
+                const reviewerHtml = [1, 2, 3].map(r =>
+                    `<div style="display: inline-block; margin-right: 1.5rem;">
+                        <strong style="color: ${r === 1 ? '#3b82f6' : r === 2 ? '#10b981' : '#f59e0b'};">Reviewer ${r}:</strong>
+                        ${reviewers[r] || 0} users
+                    </div>`
+                ).join('');
+
+                // Feature group comparison
+                const featureGroups = data.feature_groups || {};
+                const basicStats = featureGroups.basic || { users: 0, messages: 0 };
+                const fullStats = featureGroups.full || { users: 0, messages: 0 };
+
+                // Feature adoption
+                const adoption = data.feature_adoption || {};
+                const ecRate = adoption.emergency_contact_total > 0
+                    ? Math.round((adoption.emergency_contact_completed / adoption.emergency_contact_total) * 100)
+                    : 0;
+
+                analyticsDiv.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+                        <div class="stat-card" style="text-align: left;">
+                            <h3 style="margin-bottom: 1rem; color: #374151;">📋 Consent Summary</h3>
+                            <p><strong>Total Study Codes:</strong> ${data.total_study_codes || 0}</p>
+                            <p><strong>Accepted:</strong> <span style="color: #16a34a;">${data.consent?.accepted || 0}</span></p>
+                            <p><strong>Declined:</strong> <span style="color: #dc2626;">${data.consent?.declined || 0}</span></p>
+                            <p><strong>Pending:</strong> <span style="color: #6b7280;">${data.consent?.pending || 0}</span></p>
+                        </div>
+
+                        <div class="stat-card" style="text-align: left;">
+                            <h3 style="margin-bottom: 1rem; color: #374151;">💬 Engagement</h3>
+                            <p><strong>Users Sent Messages:</strong> ${data.engagement?.users_with_messages || 0}</p>
+                            <p><strong>Active Last 7 Days:</strong> ${data.engagement?.active_last_7_days || 0}</p>
+                            <p><strong>Total Messages:</strong> ${data.engagement?.total_user_messages || 0}</p>
+                            <p><strong>Avg per User:</strong> ${data.engagement?.avg_messages_per_user || 0}</p>
+                        </div>
+
+                        <div class="stat-card" style="text-align: left;">
+                            <h3 style="margin-bottom: 1rem; color: #374151;">🧪 A/B Test (Basic vs Full)</h3>
+                            <div style="display: flex; gap: 1rem;">
+                                <div style="flex: 1; padding: 0.5rem; background: #fef3c7; border-radius: 8px;">
+                                    <strong style="color: #d97706;">Basic</strong><br>
+                                    <span style="font-size: 0.9rem;">${basicStats.users} users</span><br>
+                                    <span style="font-size: 0.9rem;">${basicStats.messages} msgs</span>
+                                </div>
+                                <div style="flex: 1; padding: 0.5rem; background: #dcfce7; border-radius: 8px;">
+                                    <strong style="color: #16a34a;">Full</strong><br>
+                                    <span style="font-size: 0.9rem;">${fullStats.users} users</span><br>
+                                    <span style="font-size: 0.9rem;">${fullStats.messages} msgs</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card" style="text-align: left;">
+                            <h3 style="margin-bottom: 1rem; color: #374151;">✅ Feature Adoption</h3>
+                            <p><strong>Used Thermometer:</strong> ${adoption.used_feelings || 0}</p>
+                            <p><strong>Used Checklist:</strong> ${adoption.used_checklist || 0}</p>
+                            <p><strong>Emergency Contact:</strong> ${adoption.emergency_contact_completed || 0}/${adoption.emergency_contact_total || 0} (${ecRate}%)</p>
+                        </div>
+
+                        <div class="stat-card" style="text-align: left;">
+                            <h3 style="margin-bottom: 1rem; color: #374151;">🚨 Safety Flags</h3>
+                            <p><strong>Total Flags:</strong> ${data.flags?.total || 0}</p>
+                            <p><strong>Unique Users Flagged:</strong> ${data.flags?.unique_users_flagged || 0}</p>
+                            <p><strong>Flag Rate:</strong> ${data.flags?.flag_rate_percent || 0}%</p>
+                            <div style="margin-top: 0.5rem;">
+                                <strong>By Type:</strong><br>
+                                ${flagTypesHtml}
+                            </div>
+                        </div>
+
+                        <div class="stat-card" style="text-align: left;">
+                            <h3 style="margin-bottom: 1rem; color: #374151;">👥 Reviewer Assignment</h3>
+                            ${reviewerHtml}
+                            <p style="margin-top: 0.5rem; font-size: 0.85rem; color: #6b7280;">
+                                (Assigned on first message)
+                            </p>
+                        </div>
                     </div>
                 `;
             } catch (error) {
                 document.getElementById('statsGrid').innerHTML = `
                     <div class="error">Error loading statistics: ${error.message}</div>
                 `;
-            }
-        }
-
-        // Load flagged chats
-        async function loadFlaggedChats(page = 1) {
-            try {
-                const response = await fetch(`/admin/flagged-chats?page=${page}&limit=${limit}`);
-                const data = await response.json();
-                
-                const chatList = document.getElementById('chatList');
-                const pagination = document.getElementById('pagination');
-                
-                if (data.flagged_chats && data.flagged_chats.length > 0) {
-                    chatList.innerHTML = data.flagged_chats.map(chat => `
-                        <div class="chat-item">
-                            <div class="chat-header">
-                                <span class="flag-type ${chat.flag_type}">${chat.flag_type}</span>
-                                <span class="chat-timestamp">${new Date(chat.timestamp).toLocaleString()}</span>
-                            </div>
-                            <div class="chat-message">
-                                <strong>Access Code:</strong> ${chat.access_code}<br>
-                                <strong>Message:</strong> ${chat.message}
-                            </div>
-                            <div class="chat-details">
-                                <div><strong>Confidence:</strong> ${(chat.confidence * 100).toFixed(1)}%</div>
-                                <div><strong>IP Address:</strong> ${chat.ip_address || 'Unknown'}</div>
-                                <div><strong>User Agent:</strong> ${chat.user_agent ? chat.user_agent.substring(0, 50) + '...' : 'Unknown'}</div>
-                            </div>
-                        </div>
-                    `).join('');
-                    
-                    // Show pagination if there are more pages
-                    if (data.flagged_chats.length === limit) {
-                        pagination.style.display = 'flex';
-                        currentPage = page;
-                        document.getElementById('currentPage').textContent = `Page ${page}`;
-                        document.getElementById('prevBtn').disabled = page === 1;
-                    } else {
-                        pagination.style.display = 'none';
-                    }
-                } else {
-                    chatList.innerHTML = '<div class="loading">No flagged chats found</div>';
-                    pagination.style.display = 'none';
-                }
-            } catch (error) {
-                document.getElementById('chatList').innerHTML = `
-                    <div class="error">Error loading flagged chats: ${error.message}</div>
+                document.getElementById('studyAnalytics').innerHTML = `
+                    <div class="error">Error loading study analytics: ${error.message}</div>
                 `;
             }
-        }
-
-        function previousPage() {
-            if (currentPage > 1) {
-                loadFlaggedChats(currentPage - 1);
-            }
-        }
-
-        function nextPage() {
-            loadFlaggedChats(currentPage + 1);
         }
 
         // Load data on page load
         document.addEventListener('DOMContentLoaded', () => {
             checkAdminAuth();
-            loadStats();
-            loadFlaggedChats();
+            loadStudyAnalytics();
             loadAccessCodes();
         });
 
         // Refresh data every 30 seconds
         setInterval(() => {
-            loadStats();
-            loadFlaggedChats(currentPage);
+            loadStudyAnalytics();
         }, 30000);
 
         // Tab switching functionality

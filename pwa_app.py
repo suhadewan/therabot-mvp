@@ -296,6 +296,23 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
         db.save_chat_message(user_id, access_code, "user", message_text)
         log_timing("User message saved")
 
+        # Auto-assign reviewer on first message (if not already assigned)
+        # This ensures reviewers only see users who have actually engaged
+        def assign_reviewer_background():
+            try:
+                db = get_database()
+                all_codes = db.get_all_access_codes()
+                current_code = next((c for c in all_codes if c.get('code') == access_code), None)
+                if current_code and current_code.get('reviewer') is None:
+                    next_reviewer = get_next_reviewer()
+                    db.update_access_code(access_code, reviewer=next_reviewer)
+                    logger.info(f"Auto-assigned reviewer {next_reviewer} to access code: {access_code} (first message)")
+            except Exception as e:
+                logger.error(f"Error assigning reviewer in background: {e}")
+
+        reviewer_thread = threading.Thread(target=assign_reviewer_background, daemon=True)
+        reviewer_thread.start()
+
         # Update streak/activity tracking in background thread (non-blocking)
         # All users need this for badge progress tracking
         def update_streak_background():
@@ -1228,6 +1245,194 @@ def admin_stats():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+@app.route('/admin/study-analytics')
+def admin_study_analytics():
+    """Get analytics for the MindMitra study (school_id = 'mindmitra_study')"""
+    try:
+        from datetime import timedelta
+        db = get_database()
+        conn = db.database._get_connection()
+        cursor = conn.cursor()
+
+        # Get total study codes
+        cursor.execute('''
+            SELECT COUNT(*) FROM access_codes WHERE school_id = 'mindmitra_study'
+        ''')
+        total_codes = cursor.fetchone()[0]
+
+        # Get consent stats (only for study codes)
+        cursor.execute('''
+            SELECT
+                SUM(CASE WHEN uc.consent_accepted = TRUE THEN 1 ELSE 0 END) as accepted,
+                SUM(CASE WHEN uc.consent_accepted = FALSE THEN 1 ELSE 0 END) as declined
+            FROM user_consents uc
+            JOIN access_codes ac ON uc.access_code = ac.code
+            WHERE ac.school_id = 'mindmitra_study'
+        ''')
+        consent_row = cursor.fetchone()
+        consented = consent_row[0] or 0
+        declined = consent_row[1] or 0
+
+        # Get users who have sent at least one message (study codes only)
+        cursor.execute('''
+            SELECT COUNT(DISTINCT cm.access_code)
+            FROM chat_messages cm
+            JOIN access_codes ac ON cm.access_code = ac.code
+            WHERE ac.school_id = 'mindmitra_study' AND cm.role = 'user'
+        ''')
+        users_with_messages = cursor.fetchone()[0]
+
+        # Get total flags (study codes only)
+        cursor.execute('''
+            SELECT COUNT(*)
+            FROM chat_messages cm
+            JOIN access_codes ac ON cm.access_code = ac.code
+            WHERE ac.school_id = 'mindmitra_study'
+            AND cm.message_type IN ('crisis', 'safety_concern', 'safety')
+        ''')
+        total_flags = cursor.fetchone()[0]
+
+        # Get flags by message_type (study codes only)
+        cursor.execute('''
+            SELECT cm.message_type, COUNT(*)
+            FROM chat_messages cm
+            JOIN access_codes ac ON cm.access_code = ac.code
+            WHERE ac.school_id = 'mindmitra_study'
+            AND cm.message_type IN ('crisis', 'safety_concern', 'safety')
+            GROUP BY cm.message_type
+        ''')
+        flags_by_type = {row[0]: row[1] for row in cursor.fetchall()}
+
+        # Get unique users flagged
+        cursor.execute('''
+            SELECT COUNT(DISTINCT cm.access_code)
+            FROM chat_messages cm
+            JOIN access_codes ac ON cm.access_code = ac.code
+            WHERE ac.school_id = 'mindmitra_study'
+            AND cm.message_type IN ('crisis', 'safety_concern', 'safety')
+        ''')
+        unique_users_flagged = cursor.fetchone()[0]
+
+        # Get total messages sent by users (study codes only)
+        cursor.execute('''
+            SELECT COUNT(*)
+            FROM chat_messages cm
+            JOIN access_codes ac ON cm.access_code = ac.code
+            WHERE ac.school_id = 'mindmitra_study' AND cm.role = 'user'
+        ''')
+        total_user_messages = cursor.fetchone()[0]
+
+        # Get users active in last 7 days
+        cursor.execute('''
+            SELECT COUNT(DISTINCT cm.access_code)
+            FROM chat_messages cm
+            JOIN access_codes ac ON cm.access_code = ac.code
+            WHERE ac.school_id = 'mindmitra_study'
+            AND cm.role = 'user'
+            AND cm.timestamp > NOW() - INTERVAL '7 days'
+        ''')
+        active_last_7_days = cursor.fetchone()[0]
+
+        # Get engagement by feature group (Basic vs Full)
+        cursor.execute('''
+            SELECT
+                ac.feature_group,
+                COUNT(DISTINCT cm.access_code) as users,
+                COUNT(*) as messages
+            FROM chat_messages cm
+            JOIN access_codes ac ON cm.access_code = ac.code
+            WHERE ac.school_id = 'mindmitra_study' AND cm.role = 'user'
+            GROUP BY ac.feature_group
+        ''')
+        feature_group_stats = {}
+        for row in cursor.fetchall():
+            group = row[0] or 'unknown'
+            feature_group_stats[group] = {'users': row[1], 'messages': row[2]}
+
+        # Get emergency contact completion rate
+        cursor.execute('''
+            SELECT
+                COUNT(*) FILTER (WHERE uc.emergency_contact_submitted = TRUE) as completed,
+                COUNT(*) as total_consented
+            FROM user_consents uc
+            JOIN access_codes ac ON uc.access_code = ac.code
+            WHERE ac.school_id = 'mindmitra_study' AND uc.consent_accepted = TRUE
+        ''')
+        ec_row = cursor.fetchone()
+        emergency_contact_completed = ec_row[0] or 0
+        emergency_contact_total = ec_row[1] or 0
+
+        # Get users who used checklist (study codes only)
+        cursor.execute('''
+            SELECT COUNT(DISTINCT ct.user_id)
+            FROM checklist_tracking ct
+            JOIN access_codes ac ON ct.access_code = ac.code
+            WHERE ac.school_id = 'mindmitra_study'
+        ''')
+        users_used_checklist = cursor.fetchone()[0]
+
+        # Get users who used feelings/thermometer (study codes only)
+        cursor.execute('''
+            SELECT COUNT(DISTINCT ft.user_id)
+            FROM feelings_tracking ft
+            JOIN access_codes ac ON ft.access_code = ac.code
+            WHERE ac.school_id = 'mindmitra_study'
+        ''')
+        users_used_feelings = cursor.fetchone()[0]
+
+        # Get reviewer distribution (study codes with reviewers)
+        cursor.execute('''
+            SELECT reviewer, COUNT(*)
+            FROM access_codes
+            WHERE school_id = 'mindmitra_study' AND reviewer IS NOT NULL
+            GROUP BY reviewer
+            ORDER BY reviewer
+        ''')
+        reviewer_counts = {row[0]: row[1] for row in cursor.fetchall()}
+
+        cursor.close()
+        if hasattr(db.database, '_return_connection'):
+            db.database._return_connection(conn)
+        else:
+            conn.close()
+
+        # Calculate flag rate
+        flag_rate = round((total_flags / total_user_messages * 100), 2) if total_user_messages > 0 else 0
+
+        return jsonify({
+            "total_study_codes": total_codes,
+            "consent": {
+                "accepted": consented,
+                "declined": declined,
+                "pending": total_codes - consented - declined
+            },
+            "engagement": {
+                "users_with_messages": users_with_messages,
+                "total_user_messages": total_user_messages,
+                "active_last_7_days": active_last_7_days,
+                "avg_messages_per_user": round(total_user_messages / users_with_messages, 1) if users_with_messages > 0 else 0
+            },
+            "feature_groups": feature_group_stats,
+            "feature_adoption": {
+                "used_checklist": users_used_checklist,
+                "used_feelings": users_used_feelings,
+                "emergency_contact_completed": emergency_contact_completed,
+                "emergency_contact_total": emergency_contact_total
+            },
+            "flags": {
+                "total": total_flags,
+                "unique_users_flagged": unique_users_flagged,
+                "flag_rate_percent": flag_rate,
+                "by_type": flags_by_type
+            },
+            "reviewers": reviewer_counts
+        })
+    except Exception as e:
+        logger.error(f"Error getting study analytics: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/auth/login', methods=['POST'])
 def auth_login():
     """Login with access code - simplified to use access code as user identifier"""
@@ -1492,13 +1697,8 @@ def save_consent():
             # User ACCEPTED - grant access
             logger.info(f"User ACCEPTED consent for access code: {access_code}, user_id: {user_id}")
 
-            # Auto-assign reviewer using round-robin (only if not already assigned)
-            all_codes = db.get_all_access_codes()
-            current_code = next((c for c in all_codes if c.get('code') == access_code), None)
-            if current_code and current_code.get('reviewer') is None:
-                next_reviewer = get_next_reviewer()
-                db.update_access_code(access_code, reviewer=next_reviewer)
-                logger.info(f"Auto-assigned reviewer {next_reviewer} to access code: {access_code}")
+            # Note: Reviewer assignment now happens when user sends their first message
+            # This ensures reviewers only see users who have actually engaged
 
             # Set session for future requests
             session['user_id'] = user_id
