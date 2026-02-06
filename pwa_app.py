@@ -1694,13 +1694,20 @@ def get_reviewer_users(reviewer_id):
             if user.get('reviewer') == reviewer_id
         ]
 
-        # Check for recent flags (last 48 hours) for each user
+        # Check for recent flags (last 48 hours) and filter to only users who have sent messages
         from datetime import datetime, timedelta
         cutoff_time = datetime.utcnow() - timedelta(hours=48)
 
+        users_with_messages = []
         for user in filtered_users:
             # Get user's chats and check for recent flags
             chats = db.get_user_chats(user['access_code'])
+
+            # Only include users who have sent at least one message (role='user')
+            has_user_message = any(chat.get('role') == 'user' for chat in chats)
+            if not has_user_message:
+                continue
+
             has_recent_flag = False
             for chat in chats:
                 msg_type = chat.get('message_type', 'normal')
@@ -1713,11 +1720,12 @@ def get_reviewer_users(reviewer_id):
                     except:
                         pass
             user['has_recent_flag'] = has_recent_flag
+            users_with_messages.append(user)
 
         return jsonify({
             "success": True,
-            "users": filtered_users,
-            "count": len(filtered_users)
+            "users": users_with_messages,
+            "count": len(users_with_messages)
         })
 
     except Exception as e:
