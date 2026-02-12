@@ -216,6 +216,11 @@ class DatabaseInterface(ABC):
         pass
 
     @abstractmethod
+    def dismiss_flag(self, message_id: int, access_code: str) -> bool:
+        """Dismiss a flagged message (set message_type to normal, remove from flagged_chats, reactivate if needed)"""
+        pass
+
+    @abstractmethod
     def save_user_consent(self, user_id: str, access_code: str, consent_accepted: bool) -> bool:
         """Save user's consent decision"""
         pass
@@ -1707,6 +1712,53 @@ class SQLiteDatabase(DatabaseInterface):
 
         except Exception as e:
             logger.error(f"Error checking if user should be restricted: {e}")
+            return False
+
+    def dismiss_flag(self, message_id: int, access_code: str) -> bool:
+        """Dismiss a flagged message: reset message_type, remove from flagged_chats, reactivate if needed"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Get the message content so we can match it in flagged_chats
+            cursor.execute('SELECT content FROM chat_messages WHERE id = ? AND access_code = ?', (message_id, access_code))
+            row = cursor.fetchone()
+            if not row:
+                conn.close()
+                logger.warning(f"dismiss_flag: No message found with id={message_id} for access_code={access_code}")
+                return False
+
+            message_content = row[0]
+
+            # Update chat_messages to normal
+            cursor.execute('''
+                UPDATE chat_messages SET message_type = 'normal' WHERE id = ?
+            ''', (message_id,))
+
+            # Delete matching row from flagged_chats
+            cursor.execute('''
+                DELETE FROM flagged_chats WHERE access_code = ? AND message = ?
+            ''', (access_code, message_content))
+
+            conn.commit()
+
+            # Re-check flag count — if user was restricted and is now below threshold, reactivate
+            flag_count = self.get_user_flag_count(access_code, days=7)
+            if flag_count < 3:
+                cursor2 = conn.cursor()
+                cursor2.execute('''
+                    UPDATE access_codes SET is_active = TRUE WHERE code = ? AND is_active = FALSE
+                ''', (access_code,))
+                if cursor2.rowcount > 0:
+                    logger.info(f"Reactivated access code {access_code} after flag dismissal (now {flag_count} flags)")
+                conn.commit()
+
+            conn.close()
+            logger.info(f"Dismissed flag for message {message_id}, access_code {access_code}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error dismissing flag: {e}")
             return False
 
     def save_user_consent(self, user_id: str, access_code: str, consent_accepted: bool) -> bool:
@@ -4105,6 +4157,52 @@ class PostgreSQLDatabase(DatabaseInterface):
             if conn:
                 self._return_connection(conn)
 
+    def dismiss_flag(self, message_id: int, access_code: str) -> bool:
+        """Dismiss a flagged message: reset message_type, remove from flagged_chats, reactivate if needed"""
+        conn = None
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Get the message content so we can match it in flagged_chats
+            cursor.execute('SELECT content FROM chat_messages WHERE id = %s AND access_code = %s', (message_id, access_code))
+            row = cursor.fetchone()
+            if not row:
+                cursor.close()
+                logger.warning(f"dismiss_flag: No message found with id={message_id} for access_code={access_code}")
+                return False
+
+            message_content = row[0]
+
+            # Update chat_messages to normal
+            cursor.execute('UPDATE chat_messages SET message_type = %s WHERE id = %s', ('normal', message_id))
+
+            # Delete matching row from flagged_chats
+            cursor.execute('DELETE FROM flagged_chats WHERE access_code = %s AND message = %s', (access_code, message_content))
+
+            conn.commit()
+            cursor.close()
+
+            # Re-check flag count — if user was restricted and is now below threshold, reactivate
+            flag_count = self.get_user_flag_count(access_code, days=7)
+            if flag_count < 3:
+                cursor2 = conn.cursor()
+                cursor2.execute('UPDATE access_codes SET is_active = TRUE WHERE code = %s AND is_active = FALSE', (access_code,))
+                if cursor2.rowcount > 0:
+                    logger.info(f"Reactivated access code {access_code} after flag dismissal (now {flag_count} flags)")
+                conn.commit()
+                cursor2.close()
+
+            logger.info(f"Dismissed flag for message {message_id}, access_code {access_code}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error dismissing flag: {e}")
+            return False
+        finally:
+            if conn:
+                self._return_connection(conn)
+
     def save_user_consent(self, user_id: str, access_code: str, consent_accepted: bool) -> bool:
         """Save user's consent decision to PostgreSQL (by access_code)"""
         try:
@@ -5007,6 +5105,10 @@ class DatabaseManager:
     def should_restrict_user(self, user_id: str, max_flags: int = 3, days: int = 7) -> bool:
         """Check if user should be restricted based on flag count"""
         return self.database.should_restrict_user(user_id, max_flags, days)
+
+    def dismiss_flag(self, message_id: int, access_code: str) -> bool:
+        """Dismiss a flagged message"""
+        return self.database.dismiss_flag(message_id, access_code)
 
     def save_user_consent(self, user_id: str, access_code: str, consent_accepted: bool) -> bool:
         """Save user's consent decision"""

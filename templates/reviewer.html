@@ -257,6 +257,26 @@
             border-left: 3px solid #dc2626;
         }
 
+        .dismiss-flag-btn {
+            padding: 0.2rem 0.6rem;
+            font-size: 0.7rem;
+            background: #fff;
+            color: #dc2626;
+            border: 1px solid #dc2626;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 0.5rem;
+            transition: all 0.2s;
+        }
+        .dismiss-flag-btn:hover {
+            background: #dc2626;
+            color: #fff;
+        }
+        .dismiss-flag-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         .message-header {
             display: flex;
             justify-content: space-between;
@@ -646,11 +666,12 @@
                         const messageType = msg.message_type || 'normal';
                         const isFlagged = messageType === 'crisis' || messageType === 'safety_concern';
                         return `
-                            <div class="message-item ${msg.role} ${isFlagged ? 'flagged' : ''}">
+                            <div class="message-item ${msg.role} ${isFlagged ? 'flagged' : ''}" id="msg-${msg.id}">
                                 <div class="message-header">
                                     <div>
                                         <span class="message-role ${msg.role}">${msg.role}</span>
                                         <span class="message-type ${messageType}">${messageType}</span>
+                                        ${isFlagged ? `<button class="dismiss-flag-btn" onclick="dismissFlag(${msg.id}, '${msg.access_code}', this)">Dismiss Flag</button>` : ''}
                                     </div>
                                     <span class="message-timestamp">${formatDate(msg.timestamp)}</span>
                                 </div>
@@ -694,6 +715,43 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        async function dismissFlag(messageId, accessCode, btn) {
+            if (!confirm('Dismiss this flag? The message will no longer count toward the user\'s flag limit.')) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Dismissing...';
+
+            try {
+                const response = await fetch('/api/reviewer/dismiss-flag', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message_id: messageId, access_code: accessCode })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    const msgEl = document.getElementById(`msg-${messageId}`);
+                    if (msgEl) {
+                        msgEl.classList.remove('flagged');
+                        const typeSpan = msgEl.querySelector('.message-type');
+                        if (typeSpan) {
+                            typeSpan.textContent = 'normal';
+                            typeSpan.className = 'message-type normal';
+                        }
+                        btn.remove();
+                    }
+                } else {
+                    alert('Failed to dismiss flag: ' + (data.error || 'Unknown error'));
+                    btn.disabled = false;
+                    btn.textContent = 'Dismiss Flag';
+                }
+            } catch (error) {
+                alert('Error dismissing flag: ' + error.message);
+                btn.disabled = false;
+                btn.textContent = 'Dismiss Flag';
+            }
         }
 
         // Initialize
