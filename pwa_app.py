@@ -1978,6 +1978,29 @@ def get_reviewer_user_chats(reviewer_id, access_code):
         logger.error(f"Error getting reviewer user chats: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
+@app.route('/api/reviewer/dismiss-flag', methods=['POST'])
+def dismiss_flag():
+    """Dismiss a flagged message — resets message_type to normal and removes from flagged_chats."""
+    try:
+        data = request.get_json()
+        message_id = data.get('message_id')
+        access_code = data.get('access_code')
+
+        if not message_id or not access_code:
+            return jsonify({"error": "message_id and access_code are required"}), 400
+
+        db = get_database()
+        result = db.dismiss_flag(int(message_id), access_code)
+
+        if result:
+            return jsonify({"success": True, "message": "Flag dismissed successfully"})
+        else:
+            return jsonify({"error": "Could not dismiss flag — message not found"}), 404
+
+    except Exception as e:
+        logger.error(f"Error dismissing flag: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
 # ============ END REVIEWER ENDPOINTS ============
 
 @app.route('/admin/access-codes', methods=['GET'])
