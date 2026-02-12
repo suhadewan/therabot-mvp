@@ -101,7 +101,31 @@ def detect_suicide_keywords(input_lower: str) -> bool:
 
 def detect_abuse_keywords(input_lower: str) -> bool:
     """Detect abuse-related keywords"""
-    
+
+    # Common false positives to exclude (benign uses of violence-related words)
+    false_positives = [
+        "hitting the gym", "hit the gym", "hits the gym",
+        "hitting the road", "hit the road",
+        "hitting the books", "hit the books",
+        "hitting the sack", "hit the sack",
+        "hit a milestone", "hit a goal", "hit a target", "hit the target",
+        "hit or miss", "hit the nail", "hit the mark", "hit the spot",
+        "beat the deadline", "beat a deadline", "beating the deadline",
+        "beat a record", "beat my record", "beat the record", "beating a record",
+        "beat the heat", "beating the heat",
+        "heartbeat", "heart beat",
+        "beating around the bush", "beat around the bush",
+        "kicked off", "kick off", "kickstart", "kick start", "kicked back", "kick back",
+        "punched in", "punch in", "punched out", "punch out",
+        "slapped together",
+        "beat myself up about", "beat myself up over", "beating myself up",
+    ]
+
+    # Check if input contains false positives - if so, skip detection
+    for false_positive in false_positives:
+        if false_positive in input_lower:
+            return False
+
     # Physical abuse keywords
     physical_abuse_keywords = [
         "he hit me", "she hit me", "they beat me", "got slapped",
@@ -150,7 +174,7 @@ def detect_abuse_keywords(input_lower: str) -> bool:
     
     # Check for pattern matches
     abuse_patterns = [
-        r'\b(hit|hitting|slapped|punched|kicked|beat|beating)\b',
+        r'\b(hit|hitting|slapped|punched|kicked|beat|beating)\s+(me|him|her|us|the kid|the child|my child)\b',
         # More specific hurt patterns - only when someone else is doing the hurting
         r'\b(he|she|they)\s+(hurt|hurting)\s+(me|him|her)\b',
         r'\b(someone|anyone)\s+(hurt|hurting)\s+(me|him|her)\b',
