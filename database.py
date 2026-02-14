@@ -2082,7 +2082,7 @@ class SQLiteDatabase(DatabaseInterface):
 
             # If badge not yet marked as earned but user qualifies, mark it now
             badge_earned = badge_already_earned
-            if not badge_already_earned and total_messaging_days >= 15:
+            if not badge_already_earned and total_messaging_days >= 7:
                 cursor.execute('''
                     UPDATE user_accounts
                     SET badge_15_days_earned = TRUE, badge_15_days_earned_at = CURRENT_TIMESTAMP
@@ -2099,10 +2099,10 @@ class SQLiteDatabase(DatabaseInterface):
                 'badge_earned': badge_earned,
                 'badge_earned_at': badge_earned_at,
                 'badges': {
-                    '15_days': {
+                    '7_days': {
                         'earned': badge_earned,
-                        'progress': min(total_messaging_days, 15),
-                        'target': 15
+                        'progress': min(total_messaging_days, 7),
+                        'target': 7
                     }
                 }
             }
@@ -2114,10 +2114,10 @@ class SQLiteDatabase(DatabaseInterface):
                 'badge_earned': False,
                 'badge_earned_at': None,
                 'badges': {
-                    '15_days': {
+                    '7_days': {
                         'earned': False,
                         'progress': 0,
-                        'target': 15
+                        'target': 7
                     }
                 },
                 'error': str(e)
@@ -4495,7 +4495,7 @@ class PostgreSQLDatabase(DatabaseInterface):
             total_messaging_days = cursor.fetchone()[0] or 0
 
             # Try to check/update badge status in database (may fail if column doesn't exist yet)
-            badge_earned = total_messaging_days >= 15
+            badge_earned = total_messaging_days >= 7
             badge_earned_at = None
 
             try:
@@ -4510,7 +4510,7 @@ class PostgreSQLDatabase(DatabaseInterface):
                     badge_earned_at = row[1].isoformat() if row[1] else None
 
                     # If badge not yet marked as earned but user qualifies, mark it now
-                    if not badge_already_earned and total_messaging_days >= 15:
+                    if not badge_already_earned and total_messaging_days >= 7:
                         cursor.execute('''
                             UPDATE user_accounts
                             SET badge_15_days_earned = TRUE, badge_15_days_earned_at = CURRENT_TIMESTAMP
@@ -4532,10 +4532,10 @@ class PostgreSQLDatabase(DatabaseInterface):
                 'badge_earned': badge_earned,
                 'badge_earned_at': badge_earned_at,
                 'badges': {
-                    '15_days': {
+                    '7_days': {
                         'earned': badge_earned,
-                        'progress': min(total_messaging_days, 15),
-                        'target': 15
+                        'progress': min(total_messaging_days, 7),
+                        'target': 7
                     }
                 }
             }
@@ -4547,10 +4547,10 @@ class PostgreSQLDatabase(DatabaseInterface):
                 'badge_earned': False,
                 'badge_earned_at': None,
                 'badges': {
-                    '15_days': {
+                    '7_days': {
                         'earned': False,
                         'progress': 0,
-                        'target': 15
+                        'target': 7
                     }
                 },
                 'error': str(e)
