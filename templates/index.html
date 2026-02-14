@@ -963,7 +963,11 @@
             }
 
             .logout-button {
-                display: none;
+                position: absolute;
+                top: 0.5rem;
+                right: 8rem;
+                padding: 0.3rem 0.6rem;
+                font-size: 0.75rem;
             }
 
             .safety-footer {
@@ -983,11 +987,6 @@
             .header p {
                 font-size: 0.8rem;
                 display: none;
-            }
-
-            .logout-button {
-                padding: 0.4rem 0.75rem;
-                font-size: 0.85rem;
             }
 
             /* Sliding sidebar for mobile */
@@ -1639,7 +1638,7 @@
                 </button>
                 <!-- Badge button (only for 'full' feature group) -->
                 <button class="badge-header-button" id="badgeHeaderButton" onclick="openBadgeModal()" style="display: none;" title="Your Badges">
-                    <img id="badgeHeaderIcon" src="/static/15_days_before.png" alt="15 Day Badge">
+                    <img id="badgeHeaderIcon" src="/static/7_days_before.png" alt="7 Day Badge">
                 </button>
             </div>
             <h1>
@@ -1844,18 +1843,18 @@
             </div>
             <div class="badge-modal-content">
                 <div class="badge-display">
-                    <img id="badgeModalImage" src="/static/15_days_before.png" alt="15 Day Badge">
+                    <img id="badgeModalImage" src="/static/7_days_before.png" alt="7 Day Badge">
                 </div>
                 <div class="badge-progress" id="badgeProgressSection">
                     <div class="badge-progress-text" id="badgeProgressText">
-                        Chat on <strong id="badgeDaysCount">0</strong> / 15 days to unlock
+                        Chat on <strong id="badgeDaysCount">0</strong> / 7 days to unlock
                     </div>
                     <div class="badge-progress-bar">
                         <div class="badge-progress-fill" id="badgeProgressFill" style="width: 0%;"></div>
                     </div>
                 </div>
                 <div class="badge-earned-text" id="badgeEarnedText" style="display: none;">
-                    🎉 Badge Earned! You've chatted for 15 days!
+                    🎉 Badge Earned! You've chatted for 7 days!
                 </div>
             </div>
         </div>
@@ -2499,20 +2498,20 @@
 
         function renderBadge(badgeData) {
             const totalDays = badgeData.total_messaging_days || 0;
-            const targetDays = 15;
+            const targetDays = 7;
             const isEarned = totalDays >= targetDays;
             const progressPercent = Math.min((totalDays / targetDays) * 100, 100);
 
             // Update header button icon
             const headerIcon = document.getElementById('badgeHeaderIcon');
             if (headerIcon) {
-                headerIcon.src = isEarned ? '/static/15_days_after.png' : '/static/15_days_before.png';
+                headerIcon.src = isEarned ? '/static/7_days_after.png' : '/static/7_days_before.png';
             }
 
             // Update modal image
             const modalImage = document.getElementById('badgeModalImage');
             if (modalImage) {
-                modalImage.src = isEarned ? '/static/15_days_after.png' : '/static/15_days_before.png';
+                modalImage.src = isEarned ? '/static/7_days_after.png' : '/static/7_days_before.png';
             }
 
             // Update progress section
@@ -2837,6 +2836,13 @@
             // Build content based on feature group
             let html = `
                 <div class="help-item">
+                    <div class="help-item-icon">🎁</div>
+                    <div class="help-item-text">
+                        <h3>Incentives</h3>
+                        <p>The first ₹100 incentive is for your first text to me, and the second ₹100 is if you chat with me for any 7 days. We've reduced this to 7 days to make it easier and more flexible for you to participate while still earning the full incentive. We'll text or email you the gift card if you meet the criteria!</p>
+                    </div>
+                </div>
+                <div class="help-item">
                     <div class="help-item-icon">🌡️</div>
                     <div class="help-item-text">
                         <h3>Thermometer</h3>
@@ -2870,7 +2876,7 @@
                     <div class="help-item-icon">🏅</div>
                     <div class="help-item-text">
                         <h3>Progress Badge</h3>
-                        <p>This progress badge turns on when you complete 15 days of texting MindMitra! Complete this badge to earn ₹100.</p>
+                        <p>This progress badge turns on when you complete 7 days of texting MindMitra! Complete this badge to earn ₹100.</p>
                     </div>
                 </div>
                 <div class="help-item">
