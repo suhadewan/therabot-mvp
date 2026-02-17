@@ -19,7 +19,8 @@ MIN_NAME_LENGTH = 3
 
 def load_names(csv_path: str = None) -> set:
     """
-    Load names from CSV file into a set for fast lookup.
+    Load names from the study participants CSV file into a set for fast lookup.
+    Splits full names (e.g. "Himanshu Arora") into individual words.
     Names are stored lowercase for case-insensitive matching.
     """
     global _names_cache
@@ -28,21 +29,20 @@ def load_names(csv_path: str = None) -> set:
         return _names_cache
 
     if csv_path is None:
-        # Default path relative to this file
-        csv_path = os.path.join(os.path.dirname(__file__), 'static', 'names.csv')
+        csv_path = os.path.join(os.path.dirname(__file__), 'real_study', 'MindMitra_Students.csv')
 
     names = set()
 
     try:
         with open(csv_path, 'r', encoding='utf-8') as f:
-            reader = csv.reader(f)
-            next(reader, None)  # Skip header row (v1,v2,v3)
+            reader = csv.DictReader(f)
 
             for row in reader:
-                for name in row:
-                    name = name.strip().lower()
-                    if name and len(name) >= MIN_NAME_LENGTH:
-                        names.add(name)
+                full_name = row.get('name', '').strip()
+                for part in full_name.split():
+                    part = part.strip().lower()
+                    if part and len(part) >= MIN_NAME_LENGTH:
+                        names.add(part)
 
         logger.info(f"Loaded {len(names)} names for filtering")
         _names_cache = names
