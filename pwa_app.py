@@ -465,6 +465,8 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
 
     # Build system prompt with long-term memory and user insights
     system_prompt = load_system_prompt()
+    today_date = datetime.now(APP_TIMEZONE).strftime('%B %d, %Y')
+    system_prompt = f"{system_prompt}\n\nToday's date is {today_date}."
     if user_insights_context:
         system_prompt = f"{system_prompt}\n\n{user_insights_context}"
         print(f"DEBUG: Added user insights context for user {user_id}")
@@ -863,6 +865,8 @@ def chat_stream():
 
         # Build system prompt
         system_prompt = load_system_prompt()
+        today_date = datetime.now(APP_TIMEZONE).strftime('%B %d, %Y')
+        system_prompt = f"{system_prompt}\n\nToday's date is {today_date}."
         if long_term_context:
             system_prompt = f"{system_prompt}\n\n{long_term_context}"
 
