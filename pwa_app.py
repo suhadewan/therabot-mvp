@@ -1888,10 +1888,11 @@ def get_reviewer_users(reviewer_id):
         # Use the same logic as admin endpoint but for reviewer portal
         all_users = db.get_users_list()
 
-        # Filter for this reviewer's assigned users only
+        # Filter for this reviewer's assigned users only, excluding non-study codes
         filtered_users = [
             user for user in all_users
             if user.get('reviewer') == reviewer_id
+            and user.get('school_id') == 'mindmitra_study'
         ]
 
         # Check for recent flags (last 48 hours) and filter to only users who have sent messages
