@@ -1966,6 +1966,9 @@ def get_reviewer_user_chats(reviewer_id, access_code):
         else:
             messages = all_messages
 
+        # Redact names for privacy
+        messages = redact_names_in_messages(messages)
+
         return jsonify({
             "success": True,
             "access_code": access_code,
