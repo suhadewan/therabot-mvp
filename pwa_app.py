@@ -347,16 +347,9 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
 
         print(f"DEBUG: Logging crisis to database for user: {user_id} with flag: {flag_type}")
 
-        # Save crisis response to database, then continue to LLM for a follow-up
+        # Log flag and notify reviewer, LLM response will be saved later in normal flow
         try:
             db = get_database()
-            db.save_chat_message(
-                user_id=user_id,
-                access_code=access_code,
-                role="assistant",
-                content=crisis_response,
-                message_type="crisis"
-            )
 
             # Log to flagged_chats table
             db.log_flagged_chat(
@@ -528,7 +521,7 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
                 access_code=access_code,
                 role="assistant",
                 content=final_response,
-                message_type="normal"
+                message_type="crisis" if is_crisis else "normal"
             )
             log_timing("Assistant response saved to DB")
         except Exception as e:
@@ -627,12 +620,12 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
         log_timing("🏁 TOTAL REQUEST TIME")
         logger.info(f"{'='*60}")
 
-        # If crisis was detected, combine crisis resources with LLM follow-up
+        # If crisis was detected, append helpline to the LLM's normal response
         if is_crisis:
-            combined_response = crisis_response + "\n\n" + final_response
+            final_response += "\n\nIf you're feeling like you need support and someone to listen to you, please reach out to AASRA 022 2754 6669"
             return {
                 "type": "crisis",
-                "response": combined_response,
+                "response": final_response,
                 "flag_type": flag_type,
                 "timestamp": "now"
             }
