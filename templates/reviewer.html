@@ -257,25 +257,56 @@
             border-left: 3px solid #dc2626;
         }
 
-        .dismiss-flag-btn {
+        .dismiss-flag-btn, .manual-flag-btn {
             padding: 0.2rem 0.6rem;
             font-size: 0.7rem;
             background: #fff;
-            color: #dc2626;
             border: 1px solid #dc2626;
             border-radius: 4px;
             cursor: pointer;
             margin-left: 0.5rem;
             transition: all 0.2s;
         }
-        .dismiss-flag-btn:hover {
-            background: #dc2626;
-            color: #fff;
-        }
-        .dismiss-flag-btn:disabled {
+        .dismiss-flag-btn { color: #dc2626; }
+        .manual-flag-btn { color: #d97706; border-color: #d97706; }
+        .dismiss-flag-btn:hover { background: #dc2626; color: #fff; }
+        .manual-flag-btn:hover { background: #d97706; color: #fff; }
+        .dismiss-flag-btn:disabled, .manual-flag-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
+
+        .flag-dropdown {
+            display: inline-block;
+            position: relative;
+            margin-left: 0.5rem;
+        }
+        .flag-dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10;
+            min-width: 180px;
+            padding: 0.25rem 0;
+        }
+        .flag-dropdown-menu.show { display: block; }
+        .flag-dropdown-item {
+            display: block;
+            width: 100%;
+            padding: 0.4rem 0.8rem;
+            border: none;
+            background: none;
+            text-align: left;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: #374151;
+        }
+        .flag-dropdown-item:hover { background: #f3f4f6; }
 
         .message-header {
             display: flex;
@@ -665,6 +696,7 @@
                     document.getElementById(`chatMessages-${reviewerId}`).innerHTML = data.messages.map(msg => {
                         const messageType = msg.message_type || 'normal';
                         const isFlagged = messageType === 'crisis' || messageType === 'safety_concern';
+                        const isNormalUser = msg.role === 'user' && !isFlagged;
                         return `
                             <div class="message-item ${msg.role} ${isFlagged ? 'flagged' : ''}" id="msg-${msg.id}">
                                 <div class="message-header">
@@ -672,6 +704,17 @@
                                         <span class="message-role ${msg.role}">${msg.role}</span>
                                         <span class="message-type ${messageType}">${messageType}</span>
                                         ${isFlagged ? `<button class="dismiss-flag-btn" onclick="dismissFlag(${msg.id}, '${msg.access_code}', this)">Dismiss Flag</button>` : ''}
+                                        ${isNormalUser ? `
+                                            <div class="flag-dropdown" id="flagDropdown-${msg.id}">
+                                                <button class="manual-flag-btn" onclick="toggleFlagDropdown(${msg.id})">Flag</button>
+                                                <div class="flag-dropdown-menu" id="flagMenu-${msg.id}">
+                                                    <button class="flag-dropdown-item" onclick="manualFlag(${msg.id}, '${msg.access_code}', 'SI')">SI - Suicidal Ideation</button>
+                                                    <button class="flag-dropdown-item" onclick="manualFlag(${msg.id}, '${msg.access_code}', 'SH')">SH - Self-Harm</button>
+                                                    <button class="flag-dropdown-item" onclick="manualFlag(${msg.id}, '${msg.access_code}', 'HI')">HI - Harm to Others</button>
+                                                    <button class="flag-dropdown-item" onclick="manualFlag(${msg.id}, '${msg.access_code}', 'EA')">EA - Abuse</button>
+                                                </div>
+                                            </div>
+                                        ` : ''}
                                     </div>
                                     <span class="message-timestamp">${formatDate(msg.timestamp)}</span>
                                 </div>
@@ -751,6 +794,60 @@
                 alert('Error dismissing flag: ' + error.message);
                 btn.disabled = false;
                 btn.textContent = 'Dismiss Flag';
+            }
+        }
+
+        function toggleFlagDropdown(messageId) {
+            // Close all other dropdowns first
+            document.querySelectorAll('.flag-dropdown-menu.show').forEach(el => {
+                if (el.id !== `flagMenu-${messageId}`) el.classList.remove('show');
+            });
+            document.getElementById(`flagMenu-${messageId}`).classList.toggle('show');
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.flag-dropdown')) {
+                document.querySelectorAll('.flag-dropdown-menu.show').forEach(el => el.classList.remove('show'));
+            }
+        });
+
+        async function manualFlag(messageId, accessCode, flagType) {
+            const labels = { SI: 'Suicidal Ideation', SH: 'Self-Harm', HI: 'Harm to Others', EA: 'Abuse' };
+            if (!confirm(`Flag this message as ${flagType} (${labels[flagType]})? This will be recorded as a manual reviewer flag.`)) return;
+
+            // Close dropdown
+            document.getElementById(`flagMenu-${messageId}`).classList.remove('show');
+
+            try {
+                const response = await fetch('/api/reviewer/manual-flag', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message_id: messageId, access_code: accessCode, flag_type: flagType })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    const msgEl = document.getElementById(`msg-${messageId}`);
+                    if (msgEl) {
+                        msgEl.classList.add('flagged');
+                        const typeSpan = msgEl.querySelector('.message-type');
+                        const newType = ['SI','SH','HI'].includes(flagType) ? 'crisis' : 'safety_concern';
+                        if (typeSpan) {
+                            typeSpan.textContent = newType;
+                            typeSpan.className = `message-type ${newType}`;
+                        }
+                        // Replace flag dropdown with dismiss button
+                        const dropdown = document.getElementById(`flagDropdown-${messageId}`);
+                        if (dropdown) {
+                            dropdown.outerHTML = `<button class="dismiss-flag-btn" onclick="dismissFlag(${messageId}, '${accessCode}', this)">Dismiss Flag</button>`;
+                        }
+                    }
+                } else {
+                    alert('Failed to flag message: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error flagging message: ' + error.message);
             }
         }
 

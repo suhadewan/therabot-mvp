@@ -221,6 +221,11 @@ class DatabaseInterface(ABC):
         pass
 
     @abstractmethod
+    def manual_flag_message(self, message_id: int, access_code: str, flag_type: str) -> bool:
+        """Manually flag a message from the reviewer portal"""
+        pass
+
+    @abstractmethod
     def save_user_consent(self, user_id: str, access_code: str, consent_accepted: bool) -> bool:
         """Save user's consent decision"""
         pass
@@ -1760,6 +1765,11 @@ class SQLiteDatabase(DatabaseInterface):
         except Exception as e:
             logger.error(f"Error dismissing flag: {e}")
             return False
+
+    def manual_flag_message(self, message_id: int, access_code: str, flag_type: str) -> bool:
+        """Not implemented for SQLite"""
+        logger.warning("manual_flag_message not implemented for SQLite")
+        return False
 
     def save_user_consent(self, user_id: str, access_code: str, consent_accepted: bool) -> bool:
         """Save user's consent decision to SQLite (by access_code)"""
@@ -4203,6 +4213,59 @@ class PostgreSQLDatabase(DatabaseInterface):
             if conn:
                 self._return_connection(conn)
 
+    def manual_flag_message(self, message_id: int, access_code: str, flag_type: str) -> bool:
+        """Manually flag a message from the reviewer portal"""
+        conn = None
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Get the message content and user_id
+            cursor.execute(
+                'SELECT content, user_id FROM chat_messages WHERE id = %s AND access_code = %s',
+                (message_id, access_code)
+            )
+            row = cursor.fetchone()
+            if not row:
+                cursor.close()
+                logger.warning(f"manual_flag_message: No message found with id={message_id} for access_code={access_code}")
+                return False
+
+            message_content = row[0]
+            user_id = row[1]
+
+            # Update chat_messages message_type to flag type category
+            message_type = 'crisis' if flag_type in ('SI', 'SH', 'HI') else 'safety_concern'
+            cursor.execute(
+                'UPDATE chat_messages SET message_type = %s WHERE id = %s',
+                (message_type, message_id)
+            )
+
+            # Insert into flagged_chats
+            cursor.execute('''
+                INSERT INTO flagged_chats (user_id, access_code, message, flag_type, confidence, analysis)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            ''', (
+                user_id,
+                access_code,
+                message_content,
+                flag_type,
+                1.0,
+                json.dumps({"detection_method": "manual_reviewer"})
+            ))
+
+            conn.commit()
+            cursor.close()
+            logger.info(f"Manually flagged message {message_id} as {flag_type} for access_code {access_code}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error manually flagging message: {e}")
+            return False
+        finally:
+            if conn:
+                self._return_connection(conn)
+
     def save_user_consent(self, user_id: str, access_code: str, consent_accepted: bool) -> bool:
         """Save user's consent decision to PostgreSQL (by access_code)"""
         try:
@@ -5109,6 +5172,10 @@ class DatabaseManager:
     def dismiss_flag(self, message_id: int, access_code: str) -> bool:
         """Dismiss a flagged message"""
         return self.database.dismiss_flag(message_id, access_code)
+
+    def manual_flag_message(self, message_id: int, access_code: str, flag_type: str) -> bool:
+        """Manually flag a message from the reviewer portal"""
+        return self.database.manual_flag_message(message_id, access_code, flag_type)
 
     def save_user_consent(self, user_id: str, access_code: str, consent_accepted: bool) -> bool:
         """Save user's consent decision"""

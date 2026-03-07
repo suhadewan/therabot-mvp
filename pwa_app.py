@@ -347,7 +347,7 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
 
         print(f"DEBUG: Logging crisis to database for user: {user_id} with flag: {flag_type}")
 
-        # Save assistant message to database with flag
+        # Save crisis response to database, then continue to LLM for a follow-up
         try:
             db = get_database()
             db.save_chat_message(
@@ -382,14 +382,8 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
             import traceback
             traceback.print_exc()
 
-        user_sessions[user_id]['messages'].append({"role": "user", "content": message_text})
-        user_sessions[user_id]['messages'].append({"role": "assistant", "content": crisis_response})
-        return {
-            "type": "crisis",
-            "response": crisis_response,
-            "flag_type": flag_type,
-            "timestamp": "now"
-        }
+        # Don't return early — fall through to LLM call for a follow-up response
+        print(f"DEBUG: Crisis resources sent, continuing to LLM for follow-up")
     
     # SKIP expensive LLM safety check for normal messages (saves 2-3 seconds!)
     # Only keyword detection is sufficient for most cases
@@ -632,6 +626,16 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
         
         log_timing("🏁 TOTAL REQUEST TIME")
         logger.info(f"{'='*60}")
+
+        # If crisis was detected, combine crisis resources with LLM follow-up
+        if is_crisis:
+            combined_response = crisis_response + "\n\n" + final_response
+            return {
+                "type": "crisis",
+                "response": combined_response,
+                "flag_type": flag_type,
+                "timestamp": "now"
+            }
 
         return {
             "type": "normal",
@@ -1889,48 +1893,51 @@ def get_reviewer_users(reviewer_id):
 
         db = get_database()
 
-        # Use the same logic as admin endpoint but for reviewer portal
-        all_users = db.get_users_list()
+        # Single query: get reviewer's study users with message counts and recent flag status
+        from datetime import datetime, timedelta, timezone
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=48)
 
-        # Filter for this reviewer's assigned users only, excluding non-study codes
-        filtered_users = [
-            user for user in all_users
-            if user.get('reviewer') == reviewer_id
-            and user.get('school_id') == 'mindmitra_study'
-        ]
+        conn = db.database._get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT
+                ac.code AS access_code,
+                ac.school_id,
+                COUNT(cm.id) FILTER (WHERE cm.role = 'user') AS user_message_count,
+                COUNT(cm.id) AS message_count,
+                MAX(cm.timestamp) AS last_activity,
+                BOOL_OR(
+                    cm.message_type IN ('crisis', 'safety_concern', 'safety')
+                    AND cm.timestamp > %s
+                ) AS has_recent_flag
+            FROM access_codes ac
+            JOIN chat_messages cm ON cm.access_code = ac.code
+            WHERE ac.reviewer = %s
+              AND ac.school_id = 'mindmitra_study'
+            GROUP BY ac.code, ac.school_id
+            HAVING COUNT(cm.id) FILTER (WHERE cm.role = 'user') > 0
+            ORDER BY MAX(cm.timestamp) DESC
+        ''', (cutoff_time, reviewer_id))
 
-        # Check for recent flags (last 48 hours) and filter to only users who have sent messages
-        from datetime import datetime, timedelta
-        cutoff_time = datetime.utcnow() - timedelta(hours=48)
+        rows = cursor.fetchall()
+        cursor.close()
+        db.database._return_connection(conn)
 
-        users_with_messages = []
-        for user in filtered_users:
-            # Get user's chats and check for recent flags
-            chats = db.get_user_chats(user['access_code'])
-
-            # Only include users who have sent at least one message (role='user')
-            has_user_message = any(chat.get('role') == 'user' for chat in chats)
-            if not has_user_message:
-                continue
-
-            has_recent_flag = False
-            for chat in chats:
-                msg_type = chat.get('message_type', 'normal')
-                if msg_type in ['crisis', 'safety_concern', 'safety']:
-                    try:
-                        msg_time = datetime.fromisoformat(chat['timestamp'].replace('Z', '+00:00'))
-                        if msg_time.replace(tzinfo=None) > cutoff_time:
-                            has_recent_flag = True
-                            break
-                    except:
-                        pass
-            user['has_recent_flag'] = has_recent_flag
-            users_with_messages.append(user)
+        users = []
+        for row in rows:
+            users.append({
+                'access_code': row[0],
+                'school_id': row[1] or 'N/A',
+                'message_count': row[3],
+                'last_activity': str(row[4]) if row[4] else None,
+                'has_recent_flag': bool(row[5]),
+                'reviewer': reviewer_id
+            })
 
         return jsonify({
             "success": True,
-            "users": users_with_messages,
-            "count": len(users_with_messages)
+            "users": users,
+            "count": len(users)
         })
 
     except Exception as e:
@@ -2007,6 +2014,33 @@ def dismiss_flag():
 
     except Exception as e:
         logger.error(f"Error dismissing flag: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/api/reviewer/manual-flag', methods=['POST'])
+def manual_flag():
+    """Manually flag a message from the reviewer portal."""
+    try:
+        data = request.get_json()
+        message_id = data.get('message_id')
+        access_code = data.get('access_code')
+        flag_type = data.get('flag_type')
+
+        if not message_id or not access_code or not flag_type:
+            return jsonify({"error": "message_id, access_code, and flag_type are required"}), 400
+
+        if flag_type not in ('SI', 'SH', 'HI', 'EA'):
+            return jsonify({"error": "flag_type must be SI, SH, HI, or EA"}), 400
+
+        db = get_database()
+        result = db.manual_flag_message(int(message_id), access_code, flag_type)
+
+        if result:
+            return jsonify({"success": True, "message": f"Message flagged as {flag_type} (manual reviewer)"})
+        else:
+            return jsonify({"error": "Could not flag message — message not found"}), 404
+
+    except Exception as e:
+        logger.error(f"Error manually flagging message: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
 # ============ END REVIEWER ENDPOINTS ============
