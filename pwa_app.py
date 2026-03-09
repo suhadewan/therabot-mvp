@@ -153,6 +153,7 @@ def get_memory_manager():
 # In-memory session storage (use Redis in production)
 user_sessions = {}
 
+
 def load_system_prompt():
     """Load system prompt from file"""
     try:
@@ -328,7 +329,36 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
 
     except Exception as e:
         print(f"Error saving user message: {e}")
-    
+
+    # Check for queued one-time message (skip LLM, return queued message as full response)
+    try:
+        db = get_database()
+        conn = db.database._get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT message FROM queued_messages WHERE access_code = %s', (user_id,))
+        row = cursor.fetchone()
+        if row:
+            queued_response = row[0]
+            cursor.execute('DELETE FROM queued_messages WHERE access_code = %s', (user_id,))
+            conn.commit()
+            cursor.close()
+            db.database._return_connection(conn)
+
+            # Save to DB and session
+            db.save_chat_message(user_id, access_code, "assistant", queued_response, message_type="normal")
+            user_sessions[user_id]['messages'].append({"role": "user", "content": message_text})
+            user_sessions[user_id]['messages'].append({"role": "assistant", "content": queued_response})
+            print(f"DEBUG: Sent queued message for user {user_id}")
+            return {
+                "type": "normal",
+                "response": queued_response,
+                "timestamp": "now"
+            }
+        cursor.close()
+        db.database._return_connection(conn)
+    except Exception as e:
+        print(f"DEBUG: Error checking queued messages: {e}")
+
     # Check for crisis keywords first (fast, no API calls)
     is_crisis, crisis_response = detect_crisis_keywords(message_text)
     log_timing("Crisis detection check")
@@ -512,6 +542,7 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
         else:
             final_response = full_response
             log_timing("Guardrails skipped (disabled for speed)")
+
 
         # Save assistant response to database
         try:
