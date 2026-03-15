@@ -37,3 +37,22 @@ htmlcov/
 /backup_*
 /cleanup/
 /real_study/
+
+# Database files
+*.db
+*.sqlite3
+
+# One-off scripts & migrations
+create_admin_user.py
+create_access_codes.py
+migrate_to_supabase.py
+optimize_database.py
+database_config.py
+add_*.py
+transfer_*.py
+manual_flag_*.py
+*.sql
+
+# Email logs
+email_send_log*.json
+access_code_creation_log.json

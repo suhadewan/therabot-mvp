@@ -81,7 +81,7 @@ def get_message_date_ist(timestamp_str: str):
 
 app = Flask(__name__)
 # Set secret key for sessions
-app.secret_key = os.getenv('SECRET_KEY', 'mindmitra-secret-key-change-in-production-2024')
+app.secret_key = os.getenv('SECRET_KEY', os.urandom(24).hex())
 
 # Production configuration
 if os.getenv('ENVIRONMENT') == 'production':
