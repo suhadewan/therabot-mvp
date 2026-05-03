@@ -130,7 +130,8 @@ def categorize_flagged_content(text: str, client: Any) -> Optional[str]:
     - SI: Suicidal Ideation / Suicide Intent
     - SH: Self-Harm (non-suicidal)
     - HI: Harm to Others / Violence
-    - EA: Emotional Abuse / Trauma disclosure
+    - SA: Sexual Abuse / Sexual Violence disclosure
+    - EA: Emotional / Physical Abuse / Trauma disclosure
     """
     try:
         categorization_prompt = """You are a mental health crisis categorization system. Analyze the following message and determine if it contains concerning content.
@@ -139,12 +140,13 @@ Categorize the message into ONE of these categories:
 - SI: Suicidal ideation, intent, or planning (e.g., "I want to die", "kms", "going to kill myself")
 - SH: Self-harm intent or planning (e.g., "I want to cut myself", "going to hurt myself")
 - HI: Intent to harm others or violence (e.g., "I want to hurt someone", "going to fight them")
-- EA: Emotional abuse disclosure or trauma (e.g., "my parents hit me", "someone touched me")
+- SA: Sexual abuse, sexual assault, or sexual harassment disclosure (e.g., "he raped me", "someone touched me", "I was molested")
+- EA: Emotional or physical abuse / trauma disclosure (e.g., "my parents hit me", "he calls me names", "domestic violence")
 - NONE: Not a crisis, just inappropriate content
 
 Message: "{message}"
 
-Respond with ONLY the category code (SI, SH, HI, EA, or NONE). No explanation."""
+Respond with ONLY the category code (SI, SH, HI, SA, EA, or NONE). No explanation."""
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",  # Fast and cheap for classification
@@ -159,7 +161,7 @@ Respond with ONLY the category code (SI, SH, HI, EA, or NONE). No explanation.""
         category = response.choices[0].message.content.strip().upper()
 
         # Validate response
-        if category in ["SI", "SH", "HI", "EA"]:
+        if category in ["SI", "SH", "HI", "SA", "EA"]:
             return category
         else:
             return None  # Not a crisis, just general moderation flag

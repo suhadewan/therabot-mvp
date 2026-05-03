@@ -2,31 +2,37 @@ import re
 from typing import Tuple
 
 
-def detect_crisis_keywords(user_input: str) -> Tuple[bool, str]:
+def detect_crisis_keywords(user_input: str) -> Tuple[bool, str, str]:
     """
     Scan user input for crisis-related keywords.
-    Returns (is_crisis_detected, override_response)
+    Returns (is_crisis_detected, flag_type, override_response).
+    flag_type is one of: "SI", "SH", "HI", "SA", "EA", or "" when no crisis.
     """
     # Convert input to lowercase for case-insensitive matching
     input_lower = user_input.lower()
 
     # Check for suicidal ideation (SI)
     if detect_suicide_keywords(input_lower):
-        return True, get_crisis_response("SI")
+        return True, "SI", get_crisis_response("SI")
+
+    # Check for sexual abuse (SA) — must run before generic abuse so the
+    # more specific flag wins
+    if detect_sexual_abuse_keywords(input_lower):
+        return True, "SA", get_abuse_response("SA")
 
     # Check for experiencing abuse (EA)
     if detect_abuse_keywords(input_lower):
-        return True, get_abuse_response("EA")
+        return True, "EA", get_abuse_response("EA")
 
     # Check for homicidal ideation (HI) - new category
     if detect_homicidal_keywords(input_lower):
-        return True, get_crisis_response("HI")
+        return True, "HI", get_crisis_response("HI")
 
     # Check for self-harm (SH) - separate from suicide
     if detect_self_harm_keywords(input_lower):
-        return True, get_crisis_response("SH")
+        return True, "SH", get_crisis_response("SH")
 
-    return False, ""
+    return False, "", ""
 
 
 def detect_suicide_keywords(input_lower: str) -> bool:
@@ -129,23 +135,14 @@ def detect_abuse_keywords(input_lower: str) -> bool:
     # Physical abuse keywords
     physical_abuse_keywords = [
         "he hit me", "she hit me", "they beat me", "got slapped",
-        "punched me", "hurt me physically", "physically hurt me", "kicked me", 
+        "punched me", "hurt me physically", "physically hurt me", "kicked me",
         "violence at home", "domestic violence", "he hurt me", "she hurt me",
         "they hurt me", "got hurt", "was hurt", "am hurt", "being hurt",
-        "usne mujhe maara", "ghar pe maar pitaayi", "usne thappad maara", 
-        "usne punch maara", "mujhe chot lagi", "ghar mein hinsa", 
+        "usne mujhe maara", "ghar pe maar pitaayi", "usne thappad maara",
+        "usne punch maara", "mujhe chot lagi", "ghar mein hinsa",
         "domestic violence ho raha hai", "usne mujhe hurt kiya"
     ]
-    
-    # Sexual abuse keywords
-    sexual_abuse_keywords = [
-        "he raped me", "she touched me", "molested me", "abused me",
-        "sexual abuse", "he forced me", "groped me", "inappropriate touching",
-        "harassed me", "usne rape kiya", "usne chhua mujhe",
-        "sexual abuse hua", "galat tarike se chhua", "harass kiya",
-        "jabardasti ki", "usne molest kiya", "chhed chhaad hui"
-    ]
-    
+
     # Emotional/verbal abuse keywords
     emotional_abuse_keywords = [
         "called me names", "insulted me", "emotionally abusive",
@@ -155,7 +152,7 @@ def detect_abuse_keywords(input_lower: str) -> bool:
         "toxic relationship hai", "bar bar neecha dikhata hai",
         "mann se tod diya"
     ]
-    
+
     # Safety/danger keywords
     safety_keywords = [
         "i feel unsafe", "i can't go home", "afraid of him", "afraid of her",
@@ -163,15 +160,15 @@ def detect_abuse_keywords(input_lower: str) -> bool:
         "main safe nahi hoon", "ghar nahi ja sakti", "uska darr lagta hai",
         "khatre mein hoon", "woh peecha karta hai", "woh mujhe jane nahi deta"
     ]
-    
+
     # Check for exact matches
-    all_abuse_keywords = (physical_abuse_keywords + sexual_abuse_keywords + 
+    all_abuse_keywords = (physical_abuse_keywords +
                          emotional_abuse_keywords + safety_keywords)
-    
+
     for keyword in all_abuse_keywords:
         if keyword.lower() in input_lower:
             return True
-    
+
     # Check for pattern matches
     abuse_patterns = [
         r'\b(hit|hitting|slapped|punched|kicked|beat|beating)\s+(me|him|her|us|the kid|the child|my child)\b',
@@ -179,25 +176,54 @@ def detect_abuse_keywords(input_lower: str) -> bool:
         r'\b(he|she|they)\s+(hurt|hurting)\s+(me|him|her)\b',
         r'\b(someone|anyone)\s+(hurt|hurting)\s+(me|him|her)\b',
         r'\b(abuse|abused|abusive)\b',
-        r'\b(rape|raped|molest|molested)\b',
-        r'\b(harass|harassed|harassment)\b',
         r'\b(control|controlling|controlled)\b',
         r'\b(toxic|violence|violent)\b',
         r'\b(unsafe|danger|dangerous)\b',
         r'\b(stalk|stalking|stalked)\b',
         r'\b(maara|maari|thappad|punch)\b',  # Hindi physical abuse
-        r'\b(rape|molest|chhua|chhed)\b',    # Hindi sexual abuse
         r'\b(control|torture|gali|bura)\b',  # Hindi emotional abuse
         r'\b(safe|khatra|darr|peecha)\b',    # Hindi safety
         # Combined patterns for better detection
         r'\b(he|she|they)\s+(hit|beat|slapped|punched|kicked)\s+(me|him|her)\b',
         r'\b(physically|mentally|emotionally)\s+(hurt|abused|harmed)\b',
     ]
-    
+
     for pattern in abuse_patterns:
         if re.search(pattern, input_lower):
             return True
-    
+
+    return False
+
+
+def detect_sexual_abuse_keywords(input_lower: str) -> bool:
+    """Detect sexual abuse / sexual violence keywords."""
+    sexual_abuse_keywords = [
+        "he raped me", "she touched me", "molested me",
+        "sexual abuse", "he forced me", "groped me", "inappropriate touching",
+        "sexually harassed", "sexually assaulted", "sexual assault",
+        "usne rape kiya", "usne chhua mujhe",
+        "sexual abuse hua", "galat tarike se chhua",
+        "jabardasti ki", "usne molest kiya", "chhed chhaad hui"
+    ]
+
+    for keyword in sexual_abuse_keywords:
+        if keyword in input_lower:
+            return True
+
+    sexual_abuse_patterns = [
+        r'\b(rape|raped|raping|molest|molested|molesting)\b',
+        r'\b(sexual(ly)?\s+(abuse|abused|assault|assaulted|harass|harassed))\b',
+        r'\b(rape|molest|chhua|chhed)\b',  # Hindi sexual abuse
+        # "touched/grabbed me" only when followed by clearly non-consensual context
+        r'\b(touched|grabbed|fondled|groped)\s+me\s+(inappropriately|sexually|down there|without\s+(my\s+)?consent|when\s+i\s+didn)\b',
+        r'\binappropriate(ly)?\s+touch(ed|ing)?\b',
+        r'\bforced\s+me\s+(to|into)\s+(have\s+sex|sleep|kiss|do\s+sexual)\b',
+    ]
+
+    for pattern in sexual_abuse_patterns:
+        if re.search(pattern, input_lower):
+            return True
+
     return False
 
 

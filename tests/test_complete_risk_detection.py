@@ -55,7 +55,7 @@ def test_complete_risk_detection(csv_file):
     results = []
     for i, test_case in enumerate(test_cases, 1):
         # LEVEL 1: Keyword Detection (immediate crisis response)
-        is_crisis_keyword, crisis_response = detect_crisis_keywords(test_case['text'])
+        is_crisis_keyword, _kw_flag_type, crisis_response = detect_crisis_keywords(test_case['text'])
 
         # LEVEL 2A: Generic Moderation (OpenAI Moderation API)
         is_safe, moderation_result = moderate_content(test_case['text'], openai_client)

@@ -1,6 +1,6 @@
 """
 Email notification module for flagged chat alerts.
-Sends notifications to on-call reviewers based on time of day (EST).
+Sends notifications to all configured reviewers simultaneously.
 Uses Elastic Email API for sending.
 """
 
@@ -27,10 +27,15 @@ TEST_EMAILS = {
 
 # Production emails (used when TEST_MODE is false)
 PRODUCTION_EMAILS = {
-    'akanksha': os.getenv('EMAIL_AKANKSHA', 'akankshada@gmail.com'),
-    'bhavya': os.getenv('EMAIL_BHAVYA', 'bsrivastava@worldbank.org'),
-    'anwesha': os.getenv('EMAIL_ANWESHA', 'anb9945@g.harvard.edu')
+    'akanksha': os.getenv('EMAIL_AKANKSHA', 'suha.dewan@gmail.com'),
+    'bhavya': os.getenv('EMAIL_BHAVYA', 'suhad@vt.edu'),
+    # 'anwesha': os.getenv('EMAIL_ANWESHA', 'anb9945@g.harvard.edu')
 }
+# PRODUCTION_EMAILS = {
+#     'akanksha': os.getenv('EMAIL_AKANKSHA', 'akankshada@gmail.com'),
+#     'bhavya': os.getenv('EMAIL_BHAVYA', 'bsrivastava@worldbank.org'),
+#     'anwesha': os.getenv('EMAIL_ANWESHA', 'anb9945@g.harvard.edu')
+# }
 
 # Elastic Email configuration
 ELASTIC_EMAIL_API_KEY = os.getenv('ELASTIC_EMAIL_API_KEY', '')
@@ -41,28 +46,19 @@ ELASTIC_EMAIL_FROM_NAME = os.getenv('ELASTIC_EMAIL_FROM_NAME', 'MindMitra Alert 
 ELASTIC_EMAIL_API_URL = 'https://api.elasticemail.com/v2/email/send'
 
 
-def get_on_call_reviewer() -> dict:
+def get_all_reviewer_emails() -> list:
     """
-    Determine which reviewer is on call based on current EST time.
-
-    Schedule (EST):
-    - Akanksha: 9 PM - 5 AM EST
-    - Bhavya: 5 AM - 1 PM EST
-    - Anwesha: 1 PM - 9 PM EST
-
-    Returns dict with 'name' and 'email'
+    Return a deduped list of every configured reviewer email.
+    Uses test or production address book depending on TEST_MODE.
     """
-    now_est = datetime.now(EST)
-    hour = now_est.hour
-
     emails = TEST_EMAILS if TEST_MODE else PRODUCTION_EMAILS
-
-    if 21 <= hour or hour < 5:  # 9 PM - 5 AM
-        return {'name': 'Akanksha', 'email': emails['akanksha']}
-    elif 5 <= hour < 13:  # 5 AM - 1 PM
-        return {'name': 'Bhavya', 'email': emails['bhavya']}
-    else:  # 1 PM - 9 PM (13 <= hour < 21)
-        return {'name': 'Anwesha', 'email': emails['anwesha']}
+    seen = set()
+    deduped = []
+    for addr in emails.values():
+        if addr and addr not in seen:
+            seen.add(addr)
+            deduped.append(addr)
+    return deduped
 
 
 def format_flag_type(flag_type: str) -> str:
@@ -71,6 +67,7 @@ def format_flag_type(flag_type: str) -> str:
         'SI': 'Suicidal Ideation',
         'SH': 'Self-Harm',
         'HI': 'Homicidal Ideation / Safety Concern',
+        'SA': 'Sexual Abuse',
         'EA': 'Emotional/Physical Abuse',
         'crisis': 'Crisis',
         'abuse': 'Abuse',
@@ -81,7 +78,7 @@ def format_flag_type(flag_type: str) -> str:
 
 
 def build_alert_email_html(access_code: str, message: str, flag_type: str,
-                           emergency_contact: dict = None, reviewer_name: str = '') -> str:
+                           emergency_contact: dict = None, reviewer_name: str = 'team') -> str:
     """Build HTML email content for flagged chat alert"""
 
     flag_display = format_flag_type(flag_type)
@@ -175,7 +172,7 @@ def build_alert_email_html(access_code: str, message: str, flag_type: str,
 
 
 def build_alert_email_text(access_code: str, message: str, flag_type: str,
-                           emergency_contact: dict = None, reviewer_name: str = '') -> str:
+                           emergency_contact: dict = None, reviewer_name: str = 'team') -> str:
     """Build plain text email content for flagged chat alert"""
 
     flag_display = format_flag_type(flag_type)
@@ -247,24 +244,22 @@ def send_flag_notification(access_code: str, message: str, flag_type: str,
         return False
 
     try:
-        # Get on-call reviewer
-        reviewer = get_on_call_reviewer()
-
-        if not reviewer['email']:
-            logger.error(f"No email configured for on-call reviewer: {reviewer['name']}")
+        recipients = get_all_reviewer_emails()
+        if not recipients:
+            logger.error("No reviewer emails configured")
             return False
 
         # Build email content
         subject = f"[FLAGGED] {format_flag_type(flag_type)} - {access_code}"
-        html_body = build_alert_email_html(access_code, message, flag_type, emergency_contact, reviewer['name'])
-        text_body = build_alert_email_text(access_code, message, flag_type, emergency_contact, reviewer['name'])
+        html_body = build_alert_email_html(access_code, message, flag_type, emergency_contact)
+        text_body = build_alert_email_text(access_code, message, flag_type, emergency_contact)
 
-        # Send via Elastic Email API
+        # Elastic Email v2 accepts a semicolon-separated 'to' list
         payload = {
             'apikey': ELASTIC_EMAIL_API_KEY,
             'from': ELASTIC_EMAIL_FROM,
             'fromName': ELASTIC_EMAIL_FROM_NAME,
-            'to': reviewer['email'],
+            'to': ';'.join(recipients),
             'subject': subject,
             'bodyHtml': html_body,
             'bodyText': text_body,
@@ -276,7 +271,7 @@ def send_flag_notification(access_code: str, message: str, flag_type: str,
         if response.status_code == 200:
             result = response.json()
             if result.get('success'):
-                logger.info(f"Flag notification sent to {reviewer['name']} ({reviewer['email']}) for {access_code}")
+                logger.info(f"Flag notification sent to {len(recipients)} reviewers ({', '.join(recipients)}) for {access_code}")
                 return True
             else:
                 logger.error(f"Elastic Email API error: {result.get('error', 'Unknown error')}")

@@ -360,21 +360,12 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
         print(f"DEBUG: Error checking queued messages: {e}")
 
     # Check for crisis keywords first (fast, no API calls)
-    is_crisis, crisis_response = detect_crisis_keywords(message_text)
+    is_crisis, flag_type, crisis_response = detect_crisis_keywords(message_text)
     log_timing("Crisis detection check")
 
-    print(f"DEBUG: Crisis detection result: {is_crisis}, response: {crisis_response[:50] if crisis_response else 'None'}...")
+    print(f"DEBUG: Crisis detection result: {is_crisis}, flag: {flag_type}, response: {crisis_response[:50] if crisis_response else 'None'}...")
 
     if is_crisis:
-        # Determine flag type from response content
-        flag_type = "SI"  # Default
-        if "Self-Harm" in crisis_response:
-            flag_type = "SH"
-        elif "Safety Concern" in crisis_response:
-            flag_type = "HI"
-        elif "Abuse" in crisis_response:
-            flag_type = "EA"
-
         print(f"DEBUG: Logging crisis to database for user: {user_id} with flag: {flag_type}")
 
         # Log flag and notify reviewer, LLM response will be saved later in normal flow
@@ -832,17 +823,8 @@ def chat_stream():
             logger.error(f"Error saving user message: {e}")
 
         # Check for crisis/safety keywords (same as process_message)
-        is_crisis, crisis_response = detect_crisis_keywords(message)
+        is_crisis, flag_type, crisis_response = detect_crisis_keywords(message)
         if is_crisis:
-            # Determine flag type from response content (same as process_message)
-            flag_type = "SI"  # Default
-            if "Self-Harm" in crisis_response:
-                flag_type = "SH"
-            elif "Safety Concern" in crisis_response:
-                flag_type = "HI"
-            elif "Abuse" in crisis_response:
-                flag_type = "EA"
-
             # Handle crisis response (non-streaming for safety)
             try:
                 db = get_database()
@@ -2052,8 +2034,8 @@ def manual_flag():
         if not message_id or not access_code or not flag_type:
             return jsonify({"error": "message_id, access_code, and flag_type are required"}), 400
 
-        if flag_type not in ('SI', 'SH', 'HI', 'EA'):
-            return jsonify({"error": "flag_type must be SI, SH, HI, or EA"}), 400
+        if flag_type not in ('SI', 'SH', 'HI', 'SA', 'EA'):
+            return jsonify({"error": "flag_type must be SI, SH, HI, SA, or EA"}), 400
 
         db = get_database()
         result = db.manual_flag_message(int(message_id), access_code, flag_type)

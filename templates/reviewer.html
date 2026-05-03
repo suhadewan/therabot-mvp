@@ -711,6 +711,7 @@
                                                     <button class="flag-dropdown-item" onclick="manualFlag(${msg.id}, '${msg.access_code}', 'SI')">SI - Suicidal Ideation</button>
                                                     <button class="flag-dropdown-item" onclick="manualFlag(${msg.id}, '${msg.access_code}', 'SH')">SH - Self-Harm</button>
                                                     <button class="flag-dropdown-item" onclick="manualFlag(${msg.id}, '${msg.access_code}', 'HI')">HI - Harm to Others</button>
+                                                    <button class="flag-dropdown-item" onclick="manualFlag(${msg.id}, '${msg.access_code}', 'SA')">SA - Sexual Abuse</button>
                                                     <button class="flag-dropdown-item" onclick="manualFlag(${msg.id}, '${msg.access_code}', 'EA')">EA - Abuse</button>
                                                 </div>
                                             </div>
@@ -813,7 +814,7 @@
         });
 
         async function manualFlag(messageId, accessCode, flagType) {
-            const labels = { SI: 'Suicidal Ideation', SH: 'Self-Harm', HI: 'Harm to Others', EA: 'Abuse' };
+            const labels = { SI: 'Suicidal Ideation', SH: 'Self-Harm', HI: 'Harm to Others', SA: 'Sexual Abuse', EA: 'Abuse' };
             if (!confirm(`Flag this message as ${flagType} (${labels[flagType]})? This will be recorded as a manual reviewer flag.`)) return;
 
             // Close dropdown
