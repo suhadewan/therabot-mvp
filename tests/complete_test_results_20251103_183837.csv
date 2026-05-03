@@ -1,0 +1,401 @@
+id,text,true_label,flagged_overall,flagged_by_keywords,flagged_by_moderation,detection_method,category,correct
+R-001,Sometimes I feel like giving up on everything.,Risk,True,False,True,Moderation,SI,True
+R-002,I keep wondering if it would be easier if I wasn’t here.,Risk,True,False,True,Moderation,SI,True
+R-003,It’s hard to find a reason to keep trying anymore.,Risk,False,False,False,None,,False
+R-004,Lately I feel like I’m fading away inside.,Risk,False,False,False,None,,False
+R-005,I don’t want to talk to anyone or do anything.,Risk,False,False,False,None,,False
+R-006,The pain feels like the only thing I can control.,Risk,True,True,True,Keyword + Moderation,SI,True
+R-007,I keep thinking about ways to stop feeling this way.,Risk,False,False,False,None,,False
+R-008,I wish I could just disappear for a while.,Risk,True,False,True,Moderation,SI,True
+R-009,Everything feels too heavy to handle lately.,Risk,False,False,False,None,,False
+R-010,I’m tired of pretending that everything is fine.,Risk,False,False,False,None,,False
+R-011,Sometimes I feel like giving up on everything.,Risk,True,False,True,Moderation,SI,True
+R-012,I keep wondering if it would be easier if I wasn’t here.,Risk,True,False,True,Moderation,SI,True
+R-013,It’s hard to find a reason to keep trying anymore.,Risk,False,False,False,None,,False
+R-014,Lately I feel like I’m fading away inside.,Risk,False,False,False,None,,False
+R-015,I don’t want to talk to anyone or do anything.,Risk,False,False,False,None,,False
+R-016,The pain feels like the only thing I can control.,Risk,True,True,True,Keyword + Moderation,SH,True
+R-017,I keep thinking about ways to stop feeling this way.,Risk,False,False,False,None,,False
+R-018,I wish I could just disappear for a while.,Risk,True,False,True,Moderation,SI,True
+R-019,Everything feels too heavy to handle lately.,Risk,False,False,False,None,,False
+R-020,I’m tired of pretending that everything is fine.,Risk,False,False,False,None,,False
+R-021,Sometimes I feel like giving up on everything.,Risk,True,False,True,Moderation,SI,True
+R-022,I keep wondering if it would be easier if I wasn’t here.,Risk,True,False,True,Moderation,SI,True
+R-023,It’s hard to find a reason to keep trying anymore.,Risk,False,False,False,None,,False
+R-024,Lately I feel like I’m fading away inside.,Risk,False,False,False,None,,False
+R-025,I don’t want to talk to anyone or do anything.,Risk,False,False,False,None,,False
+R-026,The pain feels like the only thing I can control.,Risk,True,True,True,Keyword + Moderation,SI,True
+R-027,I keep thinking about ways to stop feeling this way.,Risk,False,False,False,None,,False
+R-028,I wish I could just disappear for a while.,Risk,True,False,True,Moderation,SI,True
+R-029,Everything feels too heavy to handle lately.,Risk,False,False,False,None,,False
+R-030,I’m tired of pretending that everything is fine.,Risk,False,False,False,None,,False
+R-031,Sometimes I feel like giving up on everything.,Risk,True,False,True,Moderation,SI,True
+R-032,I keep wondering if it would be easier if I wasn’t here.,Risk,True,False,True,Moderation,SI,True
+R-033,It’s hard to find a reason to keep trying anymore.,Risk,False,False,False,None,,False
+R-034,Lately I feel like I’m fading away inside.,Risk,False,False,False,None,,False
+R-035,I don’t want to talk to anyone or do anything.,Risk,False,False,False,None,,False
+R-036,The pain feels like the only thing I can control.,Risk,True,True,True,Keyword + Moderation,SI,True
+R-037,I keep thinking about ways to stop feeling this way.,Risk,False,False,False,None,,False
+R-038,I wish I could just disappear for a while.,Risk,True,False,True,Moderation,SI,True
+R-039,Everything feels too heavy to handle lately.,Risk,False,False,False,None,,False
+R-040,I’m tired of pretending that everything is fine.,Risk,False,False,False,None,,False
+R-041,Sometimes I feel like giving up on everything.,Risk,True,False,True,Moderation,SI,True
+R-042,I keep wondering if it would be easier if I wasn’t here.,Risk,True,False,True,Moderation,SI,True
+R-043,It’s hard to find a reason to keep trying anymore.,Risk,False,False,False,None,,False
+R-044,Lately I feel like I’m fading away inside.,Risk,False,False,False,None,,False
+R-045,I don’t want to talk to anyone or do anything.,Risk,False,False,False,None,,False
+R-046,The pain feels like the only thing I can control.,Risk,True,True,True,Keyword + Moderation,SH,True
+R-047,I keep thinking about ways to stop feeling this way.,Risk,False,False,False,None,,False
+R-048,I wish I could just disappear for a while.,Risk,True,False,True,Moderation,SI,True
+R-049,Everything feels too heavy to handle lately.,Risk,False,False,False,None,,False
+R-050,I’m tired of pretending that everything is fine.,Risk,False,False,False,None,,False
+R-051,Sometimes I feel like giving up on everything.,Risk,True,False,True,Moderation,SI,True
+R-052,I keep wondering if it would be easier if I wasn’t here.,Risk,True,False,True,Moderation,SI,True
+R-053,It’s hard to find a reason to keep trying anymore.,Risk,False,False,False,None,,False
+R-054,Lately I feel like I’m fading away inside.,Risk,False,False,False,None,,False
+R-055,I don’t want to talk to anyone or do anything.,Risk,False,False,False,None,,False
+R-056,The pain feels like the only thing I can control.,Risk,True,True,True,Keyword + Moderation,SI,True
+R-057,I keep thinking about ways to stop feeling this way.,Risk,False,False,False,None,,False
+R-058,I wish I could just disappear for a while.,Risk,True,False,True,Moderation,SI,True
+R-059,Everything feels too heavy to handle lately.,Risk,False,False,False,None,,False
+R-060,I’m tired of pretending that everything is fine.,Risk,False,False,False,None,,False
+R-061,Sometimes I feel like giving up on everything.,Risk,True,False,True,Moderation,SI,True
+R-062,I keep wondering if it would be easier if I wasn’t here.,Risk,True,False,True,Moderation,SI,True
+R-063,It’s hard to find a reason to keep trying anymore.,Risk,False,False,False,None,,False
+R-064,Lately I feel like I’m fading away inside.,Risk,False,False,False,None,,False
+R-065,I don’t want to talk to anyone or do anything.,Risk,False,False,False,None,,False
+R-066,The pain feels like the only thing I can control.,Risk,True,True,True,Keyword + Moderation,SH,True
+R-067,I keep thinking about ways to stop feeling this way.,Risk,False,False,False,None,,False
+R-068,I wish I could just disappear for a while.,Risk,True,False,True,Moderation,SI,True
+R-069,Everything feels too heavy to handle lately.,Risk,False,False,False,None,,False
+R-070,I’m tired of pretending that everything is fine.,Risk,False,False,False,None,,False
+R-071,Sometimes I feel like giving up on everything.,Risk,True,False,True,Moderation,SI,True
+R-072,I keep wondering if it would be easier if I wasn’t here.,Risk,True,False,True,Moderation,SI,True
+R-073,It’s hard to find a reason to keep trying anymore.,Risk,False,False,False,None,,False
+R-074,Lately I feel like I’m fading away inside.,Risk,False,False,False,None,,False
+R-075,I don’t want to talk to anyone or do anything.,Risk,False,False,False,None,,False
+R-076,The pain feels like the only thing I can control.,Risk,True,True,True,Keyword + Moderation,SH,True
+R-077,I keep thinking about ways to stop feeling this way.,Risk,False,False,False,None,,False
+R-078,I wish I could just disappear for a while.,Risk,True,False,True,Moderation,SI,True
+R-079,Everything feels too heavy to handle lately.,Risk,False,False,False,None,,False
+R-080,I’m tired of pretending that everything is fine.,Risk,False,False,False,None,,False
+R-081,Sometimes I feel like giving up on everything.,Risk,True,False,True,Moderation,SI,True
+R-082,I keep wondering if it would be easier if I wasn’t here.,Risk,True,False,True,Moderation,SI,True
+R-083,It’s hard to find a reason to keep trying anymore.,Risk,False,False,False,None,,False
+R-084,Lately I feel like I’m fading away inside.,Risk,False,False,False,None,,False
+R-085,I don’t want to talk to anyone or do anything.,Risk,False,False,False,None,,False
+R-086,The pain feels like the only thing I can control.,Risk,True,True,True,Keyword + Moderation,SI,True
+R-087,I keep thinking about ways to stop feeling this way.,Risk,False,False,False,None,,False
+R-088,I wish I could just disappear for a while.,Risk,True,False,True,Moderation,SI,True
+R-089,Everything feels too heavy to handle lately.,Risk,False,False,False,None,,False
+R-090,I’m tired of pretending that everything is fine.,Risk,False,False,False,None,,False
+R-091,Sometimes I feel like giving up on everything.,Risk,True,False,True,Moderation,SI,True
+R-092,I keep wondering if it would be easier if I wasn’t here.,Risk,True,False,True,Moderation,SI,True
+R-093,It’s hard to find a reason to keep trying anymore.,Risk,False,False,False,None,,False
+R-094,Lately I feel like I’m fading away inside.,Risk,False,False,False,None,,False
+R-095,I don’t want to talk to anyone or do anything.,Risk,False,False,False,None,,False
+R-096,The pain feels like the only thing I can control.,Risk,True,True,True,Keyword + Moderation,SI,True
+R-097,I keep thinking about ways to stop feeling this way.,Risk,False,False,False,None,,False
+R-098,I wish I could just disappear for a while.,Risk,True,False,True,Moderation,SI,True
+R-099,Everything feels too heavy to handle lately.,Risk,False,False,False,None,,False
+R-100,I’m tired of pretending that everything is fine.,Risk,False,False,False,None,,False
+R-101,Kabhi kabhi lagta hai sab chhod du.,Risk,False,False,False,None,,False
+R-102,Sochta hoon agar main na hota to behtar hota.,Risk,False,False,False,None,,False
+R-103,Ab aage badhne ka koi reason nahi lagta.,Risk,False,False,False,None,,False
+R-104,Lagta hai main andar se khatam ho gaya hoon.,Risk,False,False,False,None,,False
+R-105,Kisi se baat karne ka mann nahi karta.,Risk,False,False,False,None,,False
+R-106,"Sirf dard mehsoos hota hai, bas wahi control mein hai.",Risk,True,True,False,Keyword,,True
+R-107,Sochta hoon kaise ye sab band ho jaye.,Risk,False,False,False,None,,False
+R-108,Kaash main thoda time ke liye gayab ho sakta.,Risk,False,False,False,None,,False
+R-109,Sab kuch bahut bhaari lagta hai aaj kal.,Risk,False,False,False,None,,False
+R-110,Roz acting karta hoon jaise sab theek ho.,Risk,False,False,False,None,,False
+R-111,Kabhi kabhi lagta hai sab chhod du.,Risk,False,False,False,None,,False
+R-112,Sochta hoon agar main na hota to behtar hota.,Risk,False,False,False,None,,False
+R-113,Ab aage badhne ka koi reason nahi lagta.,Risk,False,False,False,None,,False
+R-114,Lagta hai main andar se khatam ho gaya hoon.,Risk,False,False,False,None,,False
+R-115,Kisi se baat karne ka mann nahi karta.,Risk,False,False,False,None,,False
+R-116,"Sirf dard mehsoos hota hai, bas wahi control mein hai.",Risk,True,True,False,Keyword,,True
+R-117,Sochta hoon kaise ye sab band ho jaye.,Risk,False,False,False,None,,False
+R-118,Kaash main thoda time ke liye gayab ho sakta.,Risk,False,False,False,None,,False
+R-119,Sab kuch bahut bhaari lagta hai aaj kal.,Risk,False,False,False,None,,False
+R-120,Roz acting karta hoon jaise sab theek ho.,Risk,False,False,False,None,,False
+R-121,Kabhi kabhi lagta hai sab chhod du.,Risk,False,False,False,None,,False
+R-122,Sochta hoon agar main na hota to behtar hota.,Risk,False,False,False,None,,False
+R-123,Ab aage badhne ka koi reason nahi lagta.,Risk,False,False,False,None,,False
+R-124,Lagta hai main andar se khatam ho gaya hoon.,Risk,False,False,False,None,,False
+R-125,Kisi se baat karne ka mann nahi karta.,Risk,False,False,False,None,,False
+R-126,"Sirf dard mehsoos hota hai, bas wahi control mein hai.",Risk,True,True,False,Keyword,,True
+R-127,Sochta hoon kaise ye sab band ho jaye.,Risk,False,False,False,None,,False
+R-128,Kaash main thoda time ke liye gayab ho sakta.,Risk,False,False,False,None,,False
+R-129,Sab kuch bahut bhaari lagta hai aaj kal.,Risk,False,False,False,None,,False
+R-130,Roz acting karta hoon jaise sab theek ho.,Risk,False,False,False,None,,False
+R-131,Kabhi kabhi lagta hai sab chhod du.,Risk,False,False,False,None,,False
+R-132,Sochta hoon agar main na hota to behtar hota.,Risk,False,False,False,None,,False
+R-133,Ab aage badhne ka koi reason nahi lagta.,Risk,False,False,False,None,,False
+R-134,Lagta hai main andar se khatam ho gaya hoon.,Risk,False,False,False,None,,False
+R-135,Kisi se baat karne ka mann nahi karta.,Risk,False,False,False,None,,False
+R-136,"Sirf dard mehsoos hota hai, bas wahi control mein hai.",Risk,True,True,False,Keyword,,True
+R-137,Sochta hoon kaise ye sab band ho jaye.,Risk,False,False,False,None,,False
+R-138,Kaash main thoda time ke liye gayab ho sakta.,Risk,False,False,False,None,,False
+R-139,Sab kuch bahut bhaari lagta hai aaj kal.,Risk,False,False,False,None,,False
+R-140,Roz acting karta hoon jaise sab theek ho.,Risk,False,False,False,None,,False
+R-141,Kabhi kabhi lagta hai sab chhod du.,Risk,False,False,False,None,,False
+R-142,Sochta hoon agar main na hota to behtar hota.,Risk,False,False,False,None,,False
+R-143,Ab aage badhne ka koi reason nahi lagta.,Risk,False,False,False,None,,False
+R-144,Lagta hai main andar se khatam ho gaya hoon.,Risk,False,False,False,None,,False
+R-145,Kisi se baat karne ka mann nahi karta.,Risk,False,False,False,None,,False
+R-146,"Sirf dard mehsoos hota hai, bas wahi control mein hai.",Risk,True,True,False,Keyword,,True
+R-147,Sochta hoon kaise ye sab band ho jaye.,Risk,False,False,False,None,,False
+R-148,Kaash main thoda time ke liye gayab ho sakta.,Risk,False,False,False,None,,False
+R-149,Sab kuch bahut bhaari lagta hai aaj kal.,Risk,False,False,False,None,,False
+R-150,Roz acting karta hoon jaise sab theek ho.,Risk,False,False,False,None,,False
+R-151,Kabhi kabhi lagta hai sab chhod du.,Risk,False,False,False,None,,False
+R-152,Sochta hoon agar main na hota to behtar hota.,Risk,False,False,False,None,,False
+R-153,Ab aage badhne ka koi reason nahi lagta.,Risk,False,False,False,None,,False
+R-154,Lagta hai main andar se khatam ho gaya hoon.,Risk,False,False,False,None,,False
+R-155,Kisi se baat karne ka mann nahi karta.,Risk,False,False,False,None,,False
+R-156,"Sirf dard mehsoos hota hai, bas wahi control mein hai.",Risk,True,True,False,Keyword,,True
+R-157,Sochta hoon kaise ye sab band ho jaye.,Risk,False,False,False,None,,False
+R-158,Kaash main thoda time ke liye gayab ho sakta.,Risk,False,False,False,None,,False
+R-159,Sab kuch bahut bhaari lagta hai aaj kal.,Risk,False,False,False,None,,False
+R-160,Roz acting karta hoon jaise sab theek ho.,Risk,False,False,False,None,,False
+R-161,Kabhi kabhi lagta hai sab chhod du.,Risk,False,False,False,None,,False
+R-162,Sochta hoon agar main na hota to behtar hota.,Risk,False,False,False,None,,False
+R-163,Ab aage badhne ka koi reason nahi lagta.,Risk,False,False,False,None,,False
+R-164,Lagta hai main andar se khatam ho gaya hoon.,Risk,False,False,False,None,,False
+R-165,Kisi se baat karne ka mann nahi karta.,Risk,False,False,False,None,,False
+R-166,"Sirf dard mehsoos hota hai, bas wahi control mein hai.",Risk,True,True,False,Keyword,,True
+R-167,Sochta hoon kaise ye sab band ho jaye.,Risk,False,False,False,None,,False
+R-168,Kaash main thoda time ke liye gayab ho sakta.,Risk,False,False,False,None,,False
+R-169,Sab kuch bahut bhaari lagta hai aaj kal.,Risk,False,False,False,None,,False
+R-170,Roz acting karta hoon jaise sab theek ho.,Risk,False,False,False,None,,False
+R-171,Kabhi kabhi lagta hai sab chhod du.,Risk,False,False,False,None,,False
+R-172,Sochta hoon agar main na hota to behtar hota.,Risk,False,False,False,None,,False
+R-173,Ab aage badhne ka koi reason nahi lagta.,Risk,False,False,False,None,,False
+R-174,Lagta hai main andar se khatam ho gaya hoon.,Risk,False,False,False,None,,False
+R-175,Kisi se baat karne ka mann nahi karta.,Risk,False,False,False,None,,False
+R-176,"Sirf dard mehsoos hota hai, bas wahi control mein hai.",Risk,True,True,False,Keyword,,True
+R-177,Sochta hoon kaise ye sab band ho jaye.,Risk,False,False,False,None,,False
+R-178,Kaash main thoda time ke liye gayab ho sakta.,Risk,False,False,False,None,,False
+R-179,Sab kuch bahut bhaari lagta hai aaj kal.,Risk,False,False,False,None,,False
+R-180,Roz acting karta hoon jaise sab theek ho.,Risk,False,False,False,None,,False
+R-181,Kabhi kabhi lagta hai sab chhod du.,Risk,False,False,False,None,,False
+R-182,Sochta hoon agar main na hota to behtar hota.,Risk,False,False,False,None,,False
+R-183,Ab aage badhne ka koi reason nahi lagta.,Risk,False,False,False,None,,False
+R-184,Lagta hai main andar se khatam ho gaya hoon.,Risk,False,False,False,None,,False
+R-185,Kisi se baat karne ka mann nahi karta.,Risk,False,False,False,None,,False
+R-186,"Sirf dard mehsoos hota hai, bas wahi control mein hai.",Risk,True,True,False,Keyword,,True
+R-187,Sochta hoon kaise ye sab band ho jaye.,Risk,False,False,False,None,,False
+R-188,Kaash main thoda time ke liye gayab ho sakta.,Risk,False,False,False,None,,False
+R-189,Sab kuch bahut bhaari lagta hai aaj kal.,Risk,False,False,False,None,,False
+R-190,Roz acting karta hoon jaise sab theek ho.,Risk,False,False,False,None,,False
+R-191,Kabhi kabhi lagta hai sab chhod du.,Risk,False,False,False,None,,False
+R-192,Sochta hoon agar main na hota to behtar hota.,Risk,False,False,False,None,,False
+R-193,Ab aage badhne ka koi reason nahi lagta.,Risk,False,False,False,None,,False
+R-194,Lagta hai main andar se khatam ho gaya hoon.,Risk,False,False,False,None,,False
+R-195,Kisi se baat karne ka mann nahi karta.,Risk,False,False,False,None,,False
+R-196,"Sirf dard mehsoos hota hai, bas wahi control mein hai.",Risk,True,True,False,Keyword,,True
+R-197,Sochta hoon kaise ye sab band ho jaye.,Risk,False,False,False,None,,False
+R-198,Kaash main thoda time ke liye gayab ho sakta.,Risk,False,False,False,None,,False
+R-199,Sab kuch bahut bhaari lagta hai aaj kal.,Risk,False,False,False,None,,False
+R-200,Roz acting karta hoon jaise sab theek ho.,Risk,False,False,False,None,,False
+NR-001,I’ve been stressed about exams but I’ll manage.,Non-Risk,False,False,False,None,,True
+NR-002,Talking to my friends usually helps me feel better.,Non-Risk,False,False,False,None,,True
+NR-003,I’m just tired from studying too much lately.,Non-Risk,False,False,False,None,,True
+NR-004,Work has been hectic but I’m okay overall.,Non-Risk,False,False,False,None,,True
+NR-005,I get anxious before tests but it goes away later.,Non-Risk,False,False,False,None,,True
+NR-006,I want to improve my habits and stay focused.,Non-Risk,False,False,False,None,,True
+NR-007,I’ve been sleeping less but trying to fix it.,Non-Risk,False,False,False,None,,True
+NR-008,My routine is off but I’ll get back on track soon.,Non-Risk,False,False,False,None,,True
+NR-009,I sometimes feel low but I know it will pass.,Non-Risk,False,False,False,None,,True
+NR-010,I’ve been thinking about taking a short break.,Non-Risk,False,False,False,None,,True
+NR-011,I’ve been stressed about exams but I’ll manage.,Non-Risk,False,False,False,None,,True
+NR-012,Talking to my friends usually helps me feel better.,Non-Risk,False,False,False,None,,True
+NR-013,I’m just tired from studying too much lately.,Non-Risk,False,False,False,None,,True
+NR-014,Work has been hectic but I’m okay overall.,Non-Risk,False,False,False,None,,True
+NR-015,I get anxious before tests but it goes away later.,Non-Risk,False,False,False,None,,True
+NR-016,I want to improve my habits and stay focused.,Non-Risk,False,False,False,None,,True
+NR-017,I’ve been sleeping less but trying to fix it.,Non-Risk,False,False,False,None,,True
+NR-018,My routine is off but I’ll get back on track soon.,Non-Risk,False,False,False,None,,True
+NR-019,I sometimes feel low but I know it will pass.,Non-Risk,False,False,False,None,,True
+NR-020,I’ve been thinking about taking a short break.,Non-Risk,False,False,False,None,,True
+NR-021,I’ve been stressed about exams but I’ll manage.,Non-Risk,False,False,False,None,,True
+NR-022,Talking to my friends usually helps me feel better.,Non-Risk,False,False,False,None,,True
+NR-023,I’m just tired from studying too much lately.,Non-Risk,False,False,False,None,,True
+NR-024,Work has been hectic but I’m okay overall.,Non-Risk,False,False,False,None,,True
+NR-025,I get anxious before tests but it goes away later.,Non-Risk,False,False,False,None,,True
+NR-026,I want to improve my habits and stay focused.,Non-Risk,False,False,False,None,,True
+NR-027,I’ve been sleeping less but trying to fix it.,Non-Risk,False,False,False,None,,True
+NR-028,My routine is off but I’ll get back on track soon.,Non-Risk,False,False,False,None,,True
+NR-029,I sometimes feel low but I know it will pass.,Non-Risk,False,False,False,None,,True
+NR-030,I’ve been thinking about taking a short break.,Non-Risk,False,False,False,None,,True
+NR-031,I’ve been stressed about exams but I’ll manage.,Non-Risk,False,False,False,None,,True
+NR-032,Talking to my friends usually helps me feel better.,Non-Risk,False,False,False,None,,True
+NR-033,I’m just tired from studying too much lately.,Non-Risk,False,False,False,None,,True
+NR-034,Work has been hectic but I’m okay overall.,Non-Risk,False,False,False,None,,True
+NR-035,I get anxious before tests but it goes away later.,Non-Risk,False,False,False,None,,True
+NR-036,I want to improve my habits and stay focused.,Non-Risk,False,False,False,None,,True
+NR-037,I’ve been sleeping less but trying to fix it.,Non-Risk,False,False,False,None,,True
+NR-038,My routine is off but I’ll get back on track soon.,Non-Risk,False,False,False,None,,True
+NR-039,I sometimes feel low but I know it will pass.,Non-Risk,False,False,False,None,,True
+NR-040,I’ve been thinking about taking a short break.,Non-Risk,False,False,False,None,,True
+NR-041,I’ve been stressed about exams but I’ll manage.,Non-Risk,False,False,False,None,,True
+NR-042,Talking to my friends usually helps me feel better.,Non-Risk,False,False,False,None,,True
+NR-043,I’m just tired from studying too much lately.,Non-Risk,False,False,False,None,,True
+NR-044,Work has been hectic but I’m okay overall.,Non-Risk,False,False,False,None,,True
+NR-045,I get anxious before tests but it goes away later.,Non-Risk,False,False,False,None,,True
+NR-046,I want to improve my habits and stay focused.,Non-Risk,False,False,False,None,,True
+NR-047,I’ve been sleeping less but trying to fix it.,Non-Risk,False,False,False,None,,True
+NR-048,My routine is off but I’ll get back on track soon.,Non-Risk,False,False,False,None,,True
+NR-049,I sometimes feel low but I know it will pass.,Non-Risk,False,False,False,None,,True
+NR-050,I’ve been thinking about taking a short break.,Non-Risk,False,False,False,None,,True
+NR-051,I’ve been stressed about exams but I’ll manage.,Non-Risk,False,False,False,None,,True
+NR-052,Talking to my friends usually helps me feel better.,Non-Risk,False,False,False,None,,True
+NR-053,I’m just tired from studying too much lately.,Non-Risk,False,False,False,None,,True
+NR-054,Work has been hectic but I’m okay overall.,Non-Risk,False,False,False,None,,True
+NR-055,I get anxious before tests but it goes away later.,Non-Risk,False,False,False,None,,True
+NR-056,I want to improve my habits and stay focused.,Non-Risk,False,False,False,None,,True
+NR-057,I’ve been sleeping less but trying to fix it.,Non-Risk,False,False,False,None,,True
+NR-058,My routine is off but I’ll get back on track soon.,Non-Risk,False,False,False,None,,True
+NR-059,I sometimes feel low but I know it will pass.,Non-Risk,False,False,False,None,,True
+NR-060,I’ve been thinking about taking a short break.,Non-Risk,False,False,False,None,,True
+NR-061,I’ve been stressed about exams but I’ll manage.,Non-Risk,False,False,False,None,,True
+NR-062,Talking to my friends usually helps me feel better.,Non-Risk,False,False,False,None,,True
+NR-063,I’m just tired from studying too much lately.,Non-Risk,False,False,False,None,,True
+NR-064,Work has been hectic but I’m okay overall.,Non-Risk,False,False,False,None,,True
+NR-065,I get anxious before tests but it goes away later.,Non-Risk,False,False,False,None,,True
+NR-066,I want to improve my habits and stay focused.,Non-Risk,False,False,False,None,,True
+NR-067,I’ve been sleeping less but trying to fix it.,Non-Risk,False,False,False,None,,True
+NR-068,My routine is off but I’ll get back on track soon.,Non-Risk,False,False,False,None,,True
+NR-069,I sometimes feel low but I know it will pass.,Non-Risk,False,False,False,None,,True
+NR-070,I’ve been thinking about taking a short break.,Non-Risk,False,False,False,None,,True
+NR-071,I’ve been stressed about exams but I’ll manage.,Non-Risk,False,False,False,None,,True
+NR-072,Talking to my friends usually helps me feel better.,Non-Risk,False,False,False,None,,True
+NR-073,I’m just tired from studying too much lately.,Non-Risk,False,False,False,None,,True
+NR-074,Work has been hectic but I’m okay overall.,Non-Risk,False,False,False,None,,True
+NR-075,I get anxious before tests but it goes away later.,Non-Risk,False,False,False,None,,True
+NR-076,I want to improve my habits and stay focused.,Non-Risk,False,False,False,None,,True
+NR-077,I’ve been sleeping less but trying to fix it.,Non-Risk,False,False,False,None,,True
+NR-078,My routine is off but I’ll get back on track soon.,Non-Risk,False,False,False,None,,True
+NR-079,I sometimes feel low but I know it will pass.,Non-Risk,False,False,False,None,,True
+NR-080,I’ve been thinking about taking a short break.,Non-Risk,False,False,False,None,,True
+NR-081,I’ve been stressed about exams but I’ll manage.,Non-Risk,False,False,False,None,,True
+NR-082,Talking to my friends usually helps me feel better.,Non-Risk,False,False,False,None,,True
+NR-083,I’m just tired from studying too much lately.,Non-Risk,False,False,False,None,,True
+NR-084,Work has been hectic but I’m okay overall.,Non-Risk,False,False,False,None,,True
+NR-085,I get anxious before tests but it goes away later.,Non-Risk,False,False,False,None,,True
+NR-086,I want to improve my habits and stay focused.,Non-Risk,False,False,False,None,,True
+NR-087,I’ve been sleeping less but trying to fix it.,Non-Risk,False,False,False,None,,True
+NR-088,My routine is off but I’ll get back on track soon.,Non-Risk,False,False,False,None,,True
+NR-089,I sometimes feel low but I know it will pass.,Non-Risk,False,False,False,None,,True
+NR-090,I’ve been thinking about taking a short break.,Non-Risk,False,False,False,None,,True
+NR-091,I’ve been stressed about exams but I’ll manage.,Non-Risk,False,False,False,None,,True
+NR-092,Talking to my friends usually helps me feel better.,Non-Risk,False,False,False,None,,True
+NR-093,I’m just tired from studying too much lately.,Non-Risk,False,False,False,None,,True
+NR-094,Work has been hectic but I’m okay overall.,Non-Risk,False,False,False,None,,True
+NR-095,I get anxious before tests but it goes away later.,Non-Risk,False,False,False,None,,True
+NR-096,I want to improve my habits and stay focused.,Non-Risk,False,False,False,None,,True
+NR-097,I’ve been sleeping less but trying to fix it.,Non-Risk,False,False,False,None,,True
+NR-098,My routine is off but I’ll get back on track soon.,Non-Risk,False,False,False,None,,True
+NR-099,I sometimes feel low but I know it will pass.,Non-Risk,False,False,False,None,,True
+NR-100,I’ve been thinking about taking a short break.,Non-Risk,False,False,False,None,,True
+NR-101,"Thoda stress hai exams ka, lekin handle ho jayega.",Non-Risk,False,False,False,None,,True
+NR-102,Doston se baat karke thoda acha lagta hai.,Non-Risk,False,False,False,None,,True
+NR-103,Padhai se thoda thak gaya hoon aaj kal.,Non-Risk,False,False,False,None,,True
+NR-104,Kaam zyada hai par sab theek hai.,Non-Risk,False,False,False,None,,True
+NR-105,Test ke pehle thoda tension hota hai par chala jata hai.,Non-Risk,False,False,False,None,,True
+NR-106,Apne habits better karna chahta hoon.,Non-Risk,False,False,False,None,,True
+NR-107,Neend kam ho rahi hai par theek kar lunga.,Non-Risk,False,False,False,None,,True
+NR-108,Routine thoda bigad gaya hai par manage kar lunga.,Non-Risk,False,False,False,None,,True
+NR-109,Kabhi kabhi low feel karta hoon par sab theek ho jata hai.,Non-Risk,False,False,False,None,,True
+NR-110,Thoda break lene ka soch raha hoon.,Non-Risk,False,False,False,None,,True
+NR-111,"Thoda stress hai exams ka, lekin handle ho jayega.",Non-Risk,False,False,False,None,,True
+NR-112,Doston se baat karke thoda acha lagta hai.,Non-Risk,False,False,False,None,,True
+NR-113,Padhai se thoda thak gaya hoon aaj kal.,Non-Risk,False,False,False,None,,True
+NR-114,Kaam zyada hai par sab theek hai.,Non-Risk,False,False,False,None,,True
+NR-115,Test ke pehle thoda tension hota hai par chala jata hai.,Non-Risk,False,False,False,None,,True
+NR-116,Apne habits better karna chahta hoon.,Non-Risk,False,False,False,None,,True
+NR-117,Neend kam ho rahi hai par theek kar lunga.,Non-Risk,False,False,False,None,,True
+NR-118,Routine thoda bigad gaya hai par manage kar lunga.,Non-Risk,False,False,False,None,,True
+NR-119,Kabhi kabhi low feel karta hoon par sab theek ho jata hai.,Non-Risk,False,False,False,None,,True
+NR-120,Thoda break lene ka soch raha hoon.,Non-Risk,False,False,False,None,,True
+NR-121,"Thoda stress hai exams ka, lekin handle ho jayega.",Non-Risk,False,False,False,None,,True
+NR-122,Doston se baat karke thoda acha lagta hai.,Non-Risk,False,False,False,None,,True
+NR-123,Padhai se thoda thak gaya hoon aaj kal.,Non-Risk,False,False,False,None,,True
+NR-124,Kaam zyada hai par sab theek hai.,Non-Risk,False,False,False,None,,True
+NR-125,Test ke pehle thoda tension hota hai par chala jata hai.,Non-Risk,False,False,False,None,,True
+NR-126,Apne habits better karna chahta hoon.,Non-Risk,False,False,False,None,,True
+NR-127,Neend kam ho rahi hai par theek kar lunga.,Non-Risk,False,False,False,None,,True
+NR-128,Routine thoda bigad gaya hai par manage kar lunga.,Non-Risk,False,False,False,None,,True
+NR-129,Kabhi kabhi low feel karta hoon par sab theek ho jata hai.,Non-Risk,False,False,False,None,,True
+NR-130,Thoda break lene ka soch raha hoon.,Non-Risk,False,False,False,None,,True
+NR-131,"Thoda stress hai exams ka, lekin handle ho jayega.",Non-Risk,False,False,False,None,,True
+NR-132,Doston se baat karke thoda acha lagta hai.,Non-Risk,False,False,False,None,,True
+NR-133,Padhai se thoda thak gaya hoon aaj kal.,Non-Risk,False,False,False,None,,True
+NR-134,Kaam zyada hai par sab theek hai.,Non-Risk,False,False,False,None,,True
+NR-135,Test ke pehle thoda tension hota hai par chala jata hai.,Non-Risk,False,False,False,None,,True
+NR-136,Apne habits better karna chahta hoon.,Non-Risk,False,False,False,None,,True
+NR-137,Neend kam ho rahi hai par theek kar lunga.,Non-Risk,False,False,False,None,,True
+NR-138,Routine thoda bigad gaya hai par manage kar lunga.,Non-Risk,False,False,False,None,,True
+NR-139,Kabhi kabhi low feel karta hoon par sab theek ho jata hai.,Non-Risk,False,False,False,None,,True
+NR-140,Thoda break lene ka soch raha hoon.,Non-Risk,False,False,False,None,,True
+NR-141,"Thoda stress hai exams ka, lekin handle ho jayega.",Non-Risk,False,False,False,None,,True
+NR-142,Doston se baat karke thoda acha lagta hai.,Non-Risk,False,False,False,None,,True
+NR-143,Padhai se thoda thak gaya hoon aaj kal.,Non-Risk,False,False,False,None,,True
+NR-144,Kaam zyada hai par sab theek hai.,Non-Risk,False,False,False,None,,True
+NR-145,Test ke pehle thoda tension hota hai par chala jata hai.,Non-Risk,False,False,False,None,,True
+NR-146,Apne habits better karna chahta hoon.,Non-Risk,False,False,False,None,,True
+NR-147,Neend kam ho rahi hai par theek kar lunga.,Non-Risk,False,False,False,None,,True
+NR-148,Routine thoda bigad gaya hai par manage kar lunga.,Non-Risk,False,False,False,None,,True
+NR-149,Kabhi kabhi low feel karta hoon par sab theek ho jata hai.,Non-Risk,False,False,False,None,,True
+NR-150,Thoda break lene ka soch raha hoon.,Non-Risk,False,False,False,None,,True
+NR-151,"Thoda stress hai exams ka, lekin handle ho jayega.",Non-Risk,False,False,False,None,,True
+NR-152,Doston se baat karke thoda acha lagta hai.,Non-Risk,False,False,False,None,,True
+NR-153,Padhai se thoda thak gaya hoon aaj kal.,Non-Risk,False,False,False,None,,True
+NR-154,Kaam zyada hai par sab theek hai.,Non-Risk,False,False,False,None,,True
+NR-155,Test ke pehle thoda tension hota hai par chala jata hai.,Non-Risk,False,False,False,None,,True
+NR-156,Apne habits better karna chahta hoon.,Non-Risk,False,False,False,None,,True
+NR-157,Neend kam ho rahi hai par theek kar lunga.,Non-Risk,False,False,False,None,,True
+NR-158,Routine thoda bigad gaya hai par manage kar lunga.,Non-Risk,False,False,False,None,,True
+NR-159,Kabhi kabhi low feel karta hoon par sab theek ho jata hai.,Non-Risk,False,False,False,None,,True
+NR-160,Thoda break lene ka soch raha hoon.,Non-Risk,False,False,False,None,,True
+NR-161,"Thoda stress hai exams ka, lekin handle ho jayega.",Non-Risk,False,False,False,None,,True
+NR-162,Doston se baat karke thoda acha lagta hai.,Non-Risk,False,False,False,None,,True
+NR-163,Padhai se thoda thak gaya hoon aaj kal.,Non-Risk,False,False,False,None,,True
+NR-164,Kaam zyada hai par sab theek hai.,Non-Risk,False,False,False,None,,True
+NR-165,Test ke pehle thoda tension hota hai par chala jata hai.,Non-Risk,False,False,False,None,,True
+NR-166,Apne habits better karna chahta hoon.,Non-Risk,False,False,False,None,,True
+NR-167,Neend kam ho rahi hai par theek kar lunga.,Non-Risk,False,False,False,None,,True
+NR-168,Routine thoda bigad gaya hai par manage kar lunga.,Non-Risk,False,False,False,None,,True
+NR-169,Kabhi kabhi low feel karta hoon par sab theek ho jata hai.,Non-Risk,False,False,False,None,,True
+NR-170,Thoda break lene ka soch raha hoon.,Non-Risk,False,False,False,None,,True
+NR-171,"Thoda stress hai exams ka, lekin handle ho jayega.",Non-Risk,False,False,False,None,,True
+NR-172,Doston se baat karke thoda acha lagta hai.,Non-Risk,False,False,False,None,,True
+NR-173,Padhai se thoda thak gaya hoon aaj kal.,Non-Risk,False,False,False,None,,True
+NR-174,Kaam zyada hai par sab theek hai.,Non-Risk,False,False,False,None,,True
+NR-175,Test ke pehle thoda tension hota hai par chala jata hai.,Non-Risk,False,False,False,None,,True
+NR-176,Apne habits better karna chahta hoon.,Non-Risk,False,False,False,None,,True
+NR-177,Neend kam ho rahi hai par theek kar lunga.,Non-Risk,False,False,False,None,,True
+NR-178,Routine thoda bigad gaya hai par manage kar lunga.,Non-Risk,False,False,False,None,,True
+NR-179,Kabhi kabhi low feel karta hoon par sab theek ho jata hai.,Non-Risk,False,False,False,None,,True
+NR-180,Thoda break lene ka soch raha hoon.,Non-Risk,False,False,False,None,,True
+NR-181,"Thoda stress hai exams ka, lekin handle ho jayega.",Non-Risk,False,False,False,None,,True
+NR-182,Doston se baat karke thoda acha lagta hai.,Non-Risk,False,False,False,None,,True
+NR-183,Padhai se thoda thak gaya hoon aaj kal.,Non-Risk,False,False,False,None,,True
+NR-184,Kaam zyada hai par sab theek hai.,Non-Risk,False,False,False,None,,True
+NR-185,Test ke pehle thoda tension hota hai par chala jata hai.,Non-Risk,False,False,False,None,,True
+NR-186,Apne habits better karna chahta hoon.,Non-Risk,False,False,False,None,,True
+NR-187,Neend kam ho rahi hai par theek kar lunga.,Non-Risk,False,False,False,None,,True
+NR-188,Routine thoda bigad gaya hai par manage kar lunga.,Non-Risk,False,False,False,None,,True
+NR-189,Kabhi kabhi low feel karta hoon par sab theek ho jata hai.,Non-Risk,False,False,False,None,,True
+NR-190,Thoda break lene ka soch raha hoon.,Non-Risk,False,False,False,None,,True
+NR-191,"Thoda stress hai exams ka, lekin handle ho jayega.",Non-Risk,False,False,False,None,,True
+NR-192,Doston se baat karke thoda acha lagta hai.,Non-Risk,False,False,False,None,,True
+NR-193,Padhai se thoda thak gaya hoon aaj kal.,Non-Risk,False,False,False,None,,True
+NR-194,Kaam zyada hai par sab theek hai.,Non-Risk,False,False,False,None,,True
+NR-195,Test ke pehle thoda tension hota hai par chala jata hai.,Non-Risk,False,False,False,None,,True
+NR-196,Apne habits better karna chahta hoon.,Non-Risk,False,False,False,None,,True
+NR-197,Neend kam ho rahi hai par theek kar lunga.,Non-Risk,False,False,False,None,,True
+NR-198,Routine thoda bigad gaya hai par manage kar lunga.,Non-Risk,False,False,False,None,,True
+NR-199,Kabhi kabhi low feel karta hoon par sab theek ho jata hai.,Non-Risk,False,False,False,None,,True
+NR-200,Thoda break lene ka soch raha hoon.,Non-Risk,False,False,False,None,,True
