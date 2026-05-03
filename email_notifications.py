@@ -1,7 +1,7 @@
 """
 Email notification module for flagged chat alerts.
 Sends notifications to all configured reviewers simultaneously.
-Uses Elastic Email API for sending.
+Uses Postmark API for sending.
 """
 
 import os
@@ -37,13 +37,21 @@ PRODUCTION_EMAILS = {
 #     'anwesha': os.getenv('EMAIL_ANWESHA', 'anb9945@g.harvard.edu')
 # }
 
-# Elastic Email configuration
-ELASTIC_EMAIL_API_KEY = os.getenv('ELASTIC_EMAIL_API_KEY', '')
-ELASTIC_EMAIL_FROM = os.getenv('ELASTIC_EMAIL_FROM', 'alerts@mind-mitra.com')
-ELASTIC_EMAIL_FROM_NAME = os.getenv('ELASTIC_EMAIL_FROM_NAME', 'MindMitra Alert System')
+# Postmark configuration
+POSTMARK_API_KEY = os.getenv('POSTMARK_API_KEY', '')
+# Sender for flag alerts — falls back to the general POSTMARK_FROM_EMAIL used by
+# the study recruitment script, which already has a verified sender configured.
+POSTMARK_FROM_EMAIL = os.getenv(
+    'POSTMARK_FLAG_FROM_EMAIL',
+    os.getenv('POSTMARK_FROM_EMAIL', 'info@ugexperience.org'),
+)
+POSTMARK_FROM_NAME = os.getenv('POSTMARK_FROM_NAME', 'MindMitra Alert System')
+# Flag alerts are transactional — use the default 'outbound' stream unless
+# overridden. The recruitment script uses 'study-access-codes' which is a
+# broadcast stream and not appropriate for per-event alerts.
+POSTMARK_MESSAGE_STREAM = os.getenv('POSTMARK_FLAG_MESSAGE_STREAM', 'outbound')
 
-# Elastic Email API endpoint
-ELASTIC_EMAIL_API_URL = 'https://api.elasticemail.com/v2/email/send'
+POSTMARK_API_URL = 'https://api.postmarkapp.com/email'
 
 
 def get_all_reviewer_emails() -> list:
@@ -239,8 +247,8 @@ def send_flag_notification(access_code: str, message: str, flag_type: str,
         True if email sent successfully, False otherwise
     """
 
-    if not ELASTIC_EMAIL_API_KEY:
-        logger.warning("ELASTIC_EMAIL_API_KEY not set - skipping flag notification email")
+    if not POSTMARK_API_KEY:
+        logger.warning("POSTMARK_API_KEY not set - skipping flag notification email")
         return False
 
     try:
@@ -249,42 +257,49 @@ def send_flag_notification(access_code: str, message: str, flag_type: str,
             logger.error("No reviewer emails configured")
             return False
 
-        # Build email content
         subject = f"[FLAGGED] {format_flag_type(flag_type)} - {access_code}"
         html_body = build_alert_email_html(access_code, message, flag_type, emergency_contact)
         text_body = build_alert_email_text(access_code, message, flag_type, emergency_contact)
 
-        # Elastic Email v2 accepts a semicolon-separated 'to' list
+        # Postmark accepts up to 50 comma-separated recipients in 'To'
+        from_field = (
+            f"{POSTMARK_FROM_NAME} <{POSTMARK_FROM_EMAIL}>"
+            if POSTMARK_FROM_NAME else POSTMARK_FROM_EMAIL
+        )
         payload = {
-            'apikey': ELASTIC_EMAIL_API_KEY,
-            'from': ELASTIC_EMAIL_FROM,
-            'fromName': ELASTIC_EMAIL_FROM_NAME,
-            'to': ';'.join(recipients),
-            'subject': subject,
-            'bodyHtml': html_body,
-            'bodyText': text_body,
-            'isTransactional': True
+            'From': from_field,
+            'To': ','.join(recipients),
+            'Subject': subject,
+            'HtmlBody': html_body,
+            'TextBody': text_body,
+            'MessageStream': POSTMARK_MESSAGE_STREAM,
+            'Tag': 'flag-alert',
+        }
+        headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Postmark-Server-Token': POSTMARK_API_KEY,
         }
 
-        response = requests.post(ELASTIC_EMAIL_API_URL, data=payload, timeout=30)
+        response = requests.post(POSTMARK_API_URL, headers=headers, json=payload, timeout=30)
 
         if response.status_code == 200:
             result = response.json()
-            if result.get('success'):
-                logger.info(f"Flag notification sent to {len(recipients)} reviewers ({', '.join(recipients)}) for {access_code}")
-                return True
-            else:
-                logger.error(f"Elastic Email API error: {result.get('error', 'Unknown error')}")
-                return False
+            logger.info(
+                f"Flag notification sent to {len(recipients)} reviewers ({', '.join(recipients)}) "
+                f"for {access_code} — MessageID={result.get('MessageID')}"
+            )
+            return True
         else:
-            logger.error(f"Elastic Email API HTTP error: {response.status_code} - {response.text}")
+            # Postmark returns 4xx with a JSON body containing ErrorCode + Message
+            logger.error(f"Postmark API error: HTTP {response.status_code} - {response.text}")
             return False
 
     except requests.exceptions.Timeout:
-        logger.error("Elastic Email API timeout")
+        logger.error("Postmark API timeout")
         return False
     except requests.exceptions.RequestException as e:
-        logger.error(f"Elastic Email API request error: {e}")
+        logger.error(f"Postmark API request error: {e}")
         return False
     except Exception as e:
         logger.error(f"Error sending flag notification: {e}")
