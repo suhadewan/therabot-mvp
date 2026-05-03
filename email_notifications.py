@@ -26,16 +26,16 @@ TEST_EMAILS = {
 }
 
 # Production emails (used when TEST_MODE is false)
-PRODUCTION_EMAILS = {
-    'akanksha': os.getenv('EMAIL_AKANKSHA', 'suha.dewan@gmail.com'),
-    'bhavya': os.getenv('EMAIL_BHAVYA', 'suhad@vt.edu'),
-    # 'anwesha': os.getenv('EMAIL_ANWESHA', 'anb9945@g.harvard.edu')
-}
 # PRODUCTION_EMAILS = {
-#     'akanksha': os.getenv('EMAIL_AKANKSHA', 'akankshada@gmail.com'),
-#     'bhavya': os.getenv('EMAIL_BHAVYA', 'bsrivastava@worldbank.org'),
-#     'anwesha': os.getenv('EMAIL_ANWESHA', 'anb9945@g.harvard.edu')
+#     'akanksha': os.getenv('EMAIL_AKANKSHA', 'suha.dewan@gmail.com'),
+#     'bhavya': os.getenv('EMAIL_BHAVYA', 'suhad@vt.edu'),
+#     # 'anwesha': os.getenv('EMAIL_ANWESHA', 'anb9945@g.harvard.edu')
 # }
+PRODUCTION_EMAILS = {
+    'akanksha': os.getenv('EMAIL_AKANKSHA', 'akankshada@gmail.com'),
+    'bhavya': os.getenv('EMAIL_BHAVYA', 'bsrivastava@worldbank.org'),
+    'anwesha': os.getenv('EMAIL_ANWESHA', 'anb9945@g.harvard.edu')
+}
 
 # Postmark configuration
 POSTMARK_API_KEY = os.getenv('POSTMARK_API_KEY', '')
