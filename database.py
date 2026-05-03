@@ -950,21 +950,21 @@ class SQLiteDatabase(DatabaseInterface):
             logger.error(f"Error updating admin last login: {e}")
             return False
 
-    def create_access_code(self, code: str, user_type: str, school_id: str, max_uses: int, created_by: str, reviewer: int = None) -> bool:
-        """Create a new access code"""
+    def create_access_code(self, code: str, user_type: str, school_id: str, max_uses: int, created_by: str, reviewer: int = None, feature_group: str = 'basic') -> bool:
+        """Create a new access code. Defaults to feature_group='basic'."""
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
 
             cursor.execute('''
                 INSERT INTO access_codes
-                (code, user_type, school_id, is_active, max_uses, current_uses, created_at, created_by, reviewer)
-                VALUES (?, ?, ?, TRUE, ?, 0, CURRENT_TIMESTAMP, ?, ?)
-            ''', (code, user_type, school_id, max_uses, created_by, reviewer if reviewer and reviewer > 0 else None))
+                (code, user_type, school_id, is_active, max_uses, current_uses, created_at, created_by, reviewer, feature_group)
+                VALUES (?, ?, ?, TRUE, ?, 0, CURRENT_TIMESTAMP, ?, ?, ?)
+            ''', (code, user_type, school_id, max_uses, created_by, reviewer if reviewer and reviewer > 0 else None, feature_group))
 
             conn.commit()
             conn.close()
-            logger.info(f"Access code created: {code}")
+            logger.info(f"Access code created: {code} (feature_group={feature_group})")
             return True
 
         except Exception as e:
@@ -3364,21 +3364,21 @@ class PostgreSQLDatabase(DatabaseInterface):
             logger.error(f"Error updating admin last login: {e}")
             return False
 
-    def create_access_code(self, code: str, user_type: str, school_id: str, max_uses: int, created_by: str, reviewer: int = None) -> bool:
-        """Create a new access code"""
+    def create_access_code(self, code: str, user_type: str, school_id: str, max_uses: int, created_by: str, reviewer: int = None, feature_group: str = 'basic') -> bool:
+        """Create a new access code. Defaults to feature_group='basic'."""
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
 
             cursor.execute('''
                 INSERT INTO access_codes
-                (code, user_type, school_id, is_active, max_uses, current_uses, created_at, created_by, reviewer)
-                VALUES (%s, %s, %s, TRUE, %s, 0, CURRENT_TIMESTAMP, %s, %s)
-            ''', (code, user_type, school_id, max_uses, created_by, reviewer if reviewer and reviewer > 0 else None))
+                (code, user_type, school_id, is_active, max_uses, current_uses, created_at, created_by, reviewer, feature_group)
+                VALUES (%s, %s, %s, TRUE, %s, 0, CURRENT_TIMESTAMP, %s, %s, %s)
+            ''', (code, user_type, school_id, max_uses, created_by, reviewer if reviewer and reviewer > 0 else None, feature_group))
 
             conn.commit()
             self._return_connection(conn)
-            logger.info(f"Access code created: {code}")
+            logger.info(f"Access code created: {code} (feature_group={feature_group})")
             return True
 
         except Exception as e:
@@ -5065,9 +5065,9 @@ class DatabaseManager:
         """Update admin's last login timestamp"""
         return self.database.update_admin_last_login(username)
 
-    def create_access_code(self, code: str, user_type: str, school_id: str, max_uses: int, created_by: str, reviewer: int = None) -> bool:
-        """Create a new access code"""
-        return self.database.create_access_code(code, user_type, school_id, max_uses, created_by, reviewer)
+    def create_access_code(self, code: str, user_type: str, school_id: str, max_uses: int, created_by: str, reviewer: int = None, feature_group: str = 'basic') -> bool:
+        """Create a new access code. Defaults to feature_group='basic'."""
+        return self.database.create_access_code(code, user_type, school_id, max_uses, created_by, reviewer, feature_group)
 
     def get_all_access_codes(self) -> List[Dict[str, Any]]:
         """Get all access codes with their details"""

@@ -2074,6 +2074,7 @@ def create_access_code():
         max_uses = int(data.get('max_uses', 1))
         created_by = data.get('created_by', 'admin')
         reviewer = data.get('reviewer')
+        feature_group = (data.get('feature_group') or 'basic').strip().lower()
 
         if not code or not user_type:
             return jsonify({"error": "Code and user_type are required"}), 400
@@ -2084,8 +2085,11 @@ def create_access_code():
         if reviewer is not None and reviewer not in [0, 1, 2, 3, None]:
             return jsonify({"error": "Reviewer must be 1, 2, 3, or null"}), 400
 
+        if feature_group not in ('basic', 'full'):
+            return jsonify({"error": "feature_group must be 'basic' or 'full'"}), 400
+
         db = get_database()
-        success = db.create_access_code(code, user_type, school_id, max_uses, created_by, reviewer)
+        success = db.create_access_code(code, user_type, school_id, max_uses, created_by, reviewer, feature_group)
 
         if success:
             return jsonify({"success": True, "message": f"Access code {code} created successfully"})
