@@ -24,13 +24,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 0.75rem;
         }
 
         .login-container {
             background: #141414;
             backdrop-filter: blur(10px);
-            padding: 2rem;
-            border-radius: 20px;
+            padding: 1.25rem 1.5rem;
+            border-radius: 16px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
             width: 100%;
             max-width: 400px;
@@ -39,51 +40,55 @@
         }
 
         .logo {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 1rem;
-            border-radius: 12px;
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 0.5rem;
+            border-radius: 10px;
             object-fit: contain;
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
         }
 
         .title {
             color: #f5f5f5;
-            margin-bottom: 0.5rem;
-            font-size: 1.5rem;
+            margin-bottom: 0.15rem;
+            font-size: 1.25rem;
         }
 
         .subtitle {
             color: #a3a3a3;
-            margin-bottom: 2rem;
-            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            font-size: 0.8rem;
         }
 
         .form-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 0.75rem;
             text-align: left;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
             color: #f5f5f5;
             font-weight: 500;
+            font-size: 0.85rem;
         }
 
-        .form-group input {
+        .form-group input,
+        .form-group select {
             width: 100%;
-            padding: 0.75rem 1rem;
+            padding: 0.55rem 0.75rem;
             border: 1px solid #262626;
-            border-radius: 10px;
-            font-size: 1rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
             outline: none;
             transition: border-color 0.2s;
             background: #1a1a1a;
             color: #f5f5f5;
+            font-family: inherit;
         }
 
-        .form-group input:focus {
+        .form-group input:focus,
+        .form-group select:focus {
             border-color: #5c73b9;
         }
 
@@ -96,9 +101,9 @@
             background: #5c73b9;
             color: white;
             border: none;
-            padding: 0.75rem 1rem;
-            border-radius: 10px;
-            font-size: 1rem;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
@@ -140,15 +145,17 @@
             background: #1a1a1a;
             border: 1px solid #262626;
             color: #a3a3a3;
-            padding: 1rem;
+            padding: 0.65rem 0.75rem;
             border-radius: 8px;
-            margin-top: 1.5rem;
-            font-size: 0.9rem;
+            margin-top: 0.75rem;
+            font-size: 0.78rem;
+            line-height: 1.35;
         }
 
         .info-box h4 {
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
             color: #f5f5f5;
+            font-size: 0.85rem;
         }
 
         .info-box ul {
@@ -157,8 +164,8 @@
         }
 
         .info-box li {
-            margin-bottom: 0.25rem;
-            padding-left: 1rem;
+            margin-bottom: 0.15rem;
+            padding-left: 0.75rem;
             position: relative;
         }
 
@@ -182,17 +189,60 @@
         
         <form id="loginForm">
             <div class="form-group">
+                <label for="college">College</label>
+                <select id="college" name="college" required>
+                    <option value="" disabled selected>Select your college</option>
+                    <option value="Aryabhatta">Aryabhatta</option>
+                    <option value="ARSD">ARSD</option>
+                    <option value="Indraprastha">Indraprastha</option>
+                    <option value="Kirori Mal">Kirori Mal</option>
+                    <option value="Motilal Nehru">Motilal Nehru</option>
+                    <option value="Ram Lal Anand">Ram Lal Anand</option>
+                    <option value="Sri Venkateswara">Sri Venkateswara</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="course">Course</label>
+                <select id="course" name="course" required>
+                    <option value="" disabled selected>Select your course</option>
+                    <option value="B.Com">B.Com</option>
+                    <option value="Physics">Physics</option>
+                    <option value="Chemistry">Chemistry</option>
+                    <option value="Economics">Economics</option>
+                    <option value="English">English</option>
+                    <option value="Hindi">Hindi</option>
+                    <option value="History">History</option>
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="Political Science">Political Science</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="year">Year</label>
+                <select id="year" name="year" required>
+                    <option value="" disabled selected>Select your year</option>
+                    <option value="First">First</option>
+                    <option value="Second">Second</option>
+                    <option value="Third">Third</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
                 <label for="accessCode">Access Code</label>
-                <input 
-                    type="text" 
-                    id="accessCode" 
-                    name="accessCode" 
+                <input
+                    type="text"
+                    id="accessCode"
+                    name="accessCode"
                     placeholder="Enter your access code"
                     maxlength="10"
                     required
                 >
             </div>
-            
+
             <button type="submit" class="login-button" id="loginButton">
                 Login to MindMitra
             </button>
@@ -203,7 +253,7 @@
             <ul>
                 Your access code was emailed to you by delhiunivstudy@gmail.com
             </ul>
-            <p style="margin-top: 0.75rem; font-size: 0.8rem; color: #cbd5e1;">
+            <p style="margin-top: 0.4rem; font-size: 0.72rem; color: #cbd5e1;">
                 Access codes are provided to ensure safe, authorized use of MindMitra.
             </p>
         </div>
@@ -268,25 +318,37 @@
         // Handle form submission
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const accessCode = accessCodeInput.value.trim().toUpperCase();
-            
+            const college = document.getElementById('college').value;
+            const course = document.getElementById('course').value;
+            const year = document.getElementById('year').value;
+
             if (!accessCode) {
                 showError('Please enter an access code');
                 return;
             }
-            
+            if (!college || !course || !year) {
+                showError('Please select your college, course, and year');
+                return;
+            }
+
             // Disable button and show loading
             loginButton.disabled = true;
             loginButton.textContent = 'Logging in...';
-            
+
             try {
                 const response = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ access_code: accessCode })
+                    body: JSON.stringify({
+                        access_code: accessCode,
+                        college: college,
+                        course: course,
+                        year: year
+                    })
                 });
                 
                 const data = await response.json();

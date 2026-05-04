@@ -411,6 +411,13 @@ class SQLiteDatabase(DatabaseInterface):
             except:
                 pass  # Column already exists
 
+            # Migration: Add demographic columns to access_codes (college/course/year)
+            for col in ('college', 'course', 'year'):
+                try:
+                    cursor.execute(f'ALTER TABLE access_codes ADD COLUMN {col} TEXT')
+                except:
+                    pass  # Column already exists
+
             # Create admin users table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS admin_users (
@@ -707,7 +714,8 @@ class SQLiteDatabase(DatabaseInterface):
 
             # First check if code exists at all
             cursor.execute('''
-                SELECT code, user_type, school_id, is_active, max_uses, current_uses, feature_group
+                SELECT code, user_type, school_id, is_active, max_uses, current_uses, feature_group,
+                       college, course, year
                 FROM access_codes
                 WHERE code = ?
             ''', (code,))
@@ -729,6 +737,9 @@ class SQLiteDatabase(DatabaseInterface):
             max_uses = row[4]
             current_uses = row[5]
             feature_group = row[6] if len(row) > 6 else 'full'  # Default to 'full' for backwards compatibility
+            college = row[7] if len(row) > 7 else None
+            course = row[8] if len(row) > 8 else None
+            year = row[9] if len(row) > 9 else None
 
             # Check if code is inactive (restricted)
             if not is_active:
@@ -754,6 +765,9 @@ class SQLiteDatabase(DatabaseInterface):
                     'feature_group': feature_group,
                     'max_uses': max_uses,
                     'current_uses': current_uses,
+                    'college': college,
+                    'course': course,
+                    'year': year,
                     'valid': True
                 }
             return {'valid': False, 'error': 'Invalid access code'}
@@ -1050,6 +1064,24 @@ class SQLiteDatabase(DatabaseInterface):
 
         except Exception as e:
             logger.error(f"Error updating access code: {e}")
+            return False
+
+    def update_access_code_demographics(self, code: str, college: str = None, course: str = None, year: str = None) -> bool:
+        """Set college / course / year on an access code row."""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE access_codes
+                SET college = ?, course = ?, year = ?
+                WHERE code = ?
+            ''', (college, course, year, code))
+            conn.commit()
+            updated = cursor.rowcount
+            conn.close()
+            return updated > 0
+        except Exception as e:
+            logger.error(f"Error updating access code demographics: {e}")
             return False
 
     def get_users_by_reviewer(self, reviewer: int) -> List[Dict[str, Any]]:
@@ -2535,6 +2567,15 @@ class PostgreSQLDatabase(DatabaseInterface):
 
             if tables_exist:
                 logger.info("PostgreSQL: Tables already exist, skipping creation")
+                # Always-run migrations: ensure columns added after initial schema exist
+                try:
+                    cursor.execute('ALTER TABLE access_codes ADD COLUMN IF NOT EXISTS college TEXT')
+                    cursor.execute('ALTER TABLE access_codes ADD COLUMN IF NOT EXISTS course TEXT')
+                    cursor.execute('ALTER TABLE access_codes ADD COLUMN IF NOT EXISTS year TEXT')
+                    conn.commit()
+                except Exception as e:
+                    logger.warning(f"Demographics column migration note: {e}")
+                    conn.rollback()
                 cursor.close()
                 self._return_connection(conn)
                 return
@@ -2581,6 +2622,16 @@ class PostgreSQLDatabase(DatabaseInterface):
                 conn.commit()
             except Exception as e:
                 logger.warning(f"Badge column migration note: {e}")
+                conn.rollback()
+
+            # Migration: Add demographic columns to access_codes (college/course/year)
+            try:
+                cursor.execute('ALTER TABLE access_codes ADD COLUMN IF NOT EXISTS college TEXT')
+                cursor.execute('ALTER TABLE access_codes ADD COLUMN IF NOT EXISTS course TEXT')
+                cursor.execute('ALTER TABLE access_codes ADD COLUMN IF NOT EXISTS year TEXT')
+                conn.commit()
+            except Exception as e:
+                logger.warning(f"Demographics column migration note: {e}")
                 conn.rollback()
 
             # Admin users table
@@ -3122,7 +3173,8 @@ class PostgreSQLDatabase(DatabaseInterface):
 
             # First check if code exists (regardless of is_active)
             cursor.execute('''
-                SELECT code, user_type, school_id, is_active, max_uses, current_uses, feature_group
+                SELECT code, user_type, school_id, is_active, max_uses, current_uses, feature_group,
+                       college, course, year
                 FROM access_codes
                 WHERE code = %s
             ''', (code,))
@@ -3145,6 +3197,9 @@ class PostgreSQLDatabase(DatabaseInterface):
             max_uses = row[4]
             current_uses = row[5]
             feature_group = row[6] if len(row) > 6 and row[6] else 'full'
+            college = row[7] if len(row) > 7 else None
+            course = row[8] if len(row) > 8 else None
+            year = row[9] if len(row) > 9 else None
 
             # Check if code is inactive (restricted)
             if not is_active:
@@ -3169,6 +3224,9 @@ class PostgreSQLDatabase(DatabaseInterface):
                 'max_uses': max_uses,
                 'current_uses': current_uses,
                 'feature_group': feature_group,
+                'college': college,
+                'course': course,
+                'year': year,
                 'valid': True
             }
 
@@ -3464,6 +3522,24 @@ class PostgreSQLDatabase(DatabaseInterface):
 
         except Exception as e:
             logger.error(f"Error updating access code: {e}")
+            return False
+
+    def update_access_code_demographics(self, code: str, college: str = None, course: str = None, year: str = None) -> bool:
+        """Set college / course / year on an access code row."""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE access_codes
+                SET college = %s, course = %s, year = %s
+                WHERE code = %s
+            ''', (college, course, year, code))
+            conn.commit()
+            updated = cursor.rowcount
+            self._return_connection(conn)
+            return updated > 0
+        except Exception as e:
+            logger.error(f"Error updating access code demographics: {e}")
             return False
 
     def get_users_by_reviewer(self, reviewer: int) -> List[Dict[str, Any]]:
@@ -5076,6 +5152,10 @@ class DatabaseManager:
     def update_access_code(self, code: str, is_active: bool = None, max_uses: int = None, feature_group: str = None, reviewer: int = None) -> bool:
         """Update access code properties"""
         return self.database.update_access_code(code, is_active, max_uses, feature_group, reviewer)
+
+    def update_access_code_demographics(self, code: str, college: str = None, course: str = None, year: str = None) -> bool:
+        """Set college / course / year on an access code row."""
+        return self.database.update_access_code_demographics(code, college, course, year)
 
     def delete_access_code(self, code: str) -> bool:
         """Delete an access code (soft delete by setting inactive)"""

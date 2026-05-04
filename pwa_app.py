@@ -1457,6 +1457,14 @@ def auth_login():
         if not access_code:
             return jsonify({"error": "Access code is required"}), 400
 
+        # Demographic fields from the login dropdowns
+        college = (data.get('college') or '').strip()
+        course = (data.get('course') or '').strip()
+        year = (data.get('year') or '').strip()
+
+        if not college or not course or not year:
+            return jsonify({"error": "Please select your college, course, and year"}), 400
+
         db = get_database()
         code_validation = db.validate_access_code(access_code)
 
@@ -1464,6 +1472,22 @@ def auth_login():
             # Use the specific error message from validation
             error_message = code_validation.get('error', 'Invalid or expired access code')
             return jsonify({"error": error_message}), 401
+
+        # Verify the dropdown selections match the stored demographics on the code.
+        # Codes with no stored demographics cannot be logged into — the user must
+        # contact an admin to have their record set up.
+        stored_college = code_validation.get('college')
+        stored_course = code_validation.get('course')
+        stored_year = code_validation.get('year')
+
+        if (college != stored_college or course != stored_course or year != stored_year):
+            logger.info(
+                f"Demographics mismatch for {access_code}: "
+                f"got=({college!r},{course!r},{year!r}) "
+                f"expected=({stored_college!r},{stored_course!r},{stored_year!r})"
+            )
+            # Generic error — don't leak which field was wrong, or whether the code has stored demographics
+            return jsonify({"error": "The details you entered don't match our records. Please check, and if you believe they are correct, please reach out to an admin."}), 401
 
         # Access code IS the user identifier - they can log in unlimited times
         # No need to track max_uses or create separate user accounts
@@ -1476,7 +1500,7 @@ def auth_login():
 
         # Check consent status
         has_consented = db.check_user_consent(access_code)
-        
+
         # Check emergency contact status
         has_emergency_contact = db.check_emergency_contact_submitted(access_code)
 
