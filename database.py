@@ -2572,9 +2572,10 @@ class PostgreSQLDatabase(DatabaseInterface):
                     cursor.execute('ALTER TABLE access_codes ADD COLUMN IF NOT EXISTS college TEXT')
                     cursor.execute('ALTER TABLE access_codes ADD COLUMN IF NOT EXISTS course TEXT')
                     cursor.execute('ALTER TABLE access_codes ADD COLUMN IF NOT EXISTS year TEXT')
+                    cursor.execute('ALTER TABLE access_codes ADD COLUMN IF NOT EXISTS chat_visible_from TIMESTAMP')
                     conn.commit()
                 except Exception as e:
-                    logger.warning(f"Demographics column migration note: {e}")
+                    logger.warning(f"Access-code column migration note: {e}")
                     conn.rollback()
                 cursor.close()
                 self._return_connection(conn)
@@ -3630,26 +3631,33 @@ class PostgreSQLDatabase(DatabaseInterface):
             return False
 
     def get_chat_history(self, user_id: str, limit: int = 50, session_id: str = None) -> List[Dict[str, Any]]:
-        """Get chat history for a user from PostgreSQL - user_id is now the access_code"""
+        """Get chat history for a user from PostgreSQL - user_id is now the access_code.
+        Honors access_codes.chat_visible_from: messages older than that timestamp are
+        hidden from this view (used by chat UI + LLM context). The reviewer-facing
+        get_user_chats() bypasses this filter so reviewers still see everything.
+        """
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
 
             if session_id:
                 cursor.execute('''
-                    SELECT id, user_id, access_code, role, content, message_type, timestamp
-                    FROM chat_messages
-                    WHERE user_id = %s AND session_id = %s
-                    ORDER BY timestamp DESC
+                    SELECT cm.id, cm.user_id, cm.access_code, cm.role, cm.content, cm.message_type, cm.timestamp
+                    FROM chat_messages cm
+                    LEFT JOIN access_codes ac ON ac.code = cm.access_code
+                    WHERE cm.user_id = %s AND cm.session_id = %s
+                      AND (ac.chat_visible_from IS NULL OR cm.timestamp > ac.chat_visible_from)
+                    ORDER BY cm.timestamp DESC
                     LIMIT %s
                 ''', (user_id, session_id, limit))
             else:
-                # Simplified: user_id is now the access_code, no join needed
                 cursor.execute('''
-                    SELECT id, user_id, access_code, role, content, message_type, timestamp
-                    FROM chat_messages
-                    WHERE user_id = %s
-                    ORDER BY timestamp DESC
+                    SELECT cm.id, cm.user_id, cm.access_code, cm.role, cm.content, cm.message_type, cm.timestamp
+                    FROM chat_messages cm
+                    LEFT JOIN access_codes ac ON ac.code = cm.access_code
+                    WHERE cm.user_id = %s
+                      AND (ac.chat_visible_from IS NULL OR cm.timestamp > ac.chat_visible_from)
+                    ORDER BY cm.timestamp DESC
                     LIMIT %s
                 ''', (user_id, limit))
 
@@ -3981,18 +3989,24 @@ class PostgreSQLDatabase(DatabaseInterface):
             return False
 
     def get_conversation_summaries(self, user_id: str, days: int = 30) -> List[Dict[str, Any]]:
-        """Get conversation summaries for the last N days from PostgreSQL"""
+        """Get conversation summaries for the last N days from PostgreSQL.
+        Honors access_codes.chat_visible_from: summaries dated before that
+        timestamp are excluded so long-term memory respects the chat reset.
+        """
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
 
             cursor.execute('''
-                SELECT id, user_id, summary_date, main_concerns, emotional_patterns,
-                       coping_strategies, progress_notes, important_context,
-                       message_count, created_at, updated_at
-                FROM conversation_summaries
-                WHERE user_id = %s AND summary_date >= CURRENT_DATE - INTERVAL '%s days'
-                ORDER BY summary_date DESC
+                SELECT cs.id, cs.user_id, cs.summary_date, cs.main_concerns, cs.emotional_patterns,
+                       cs.coping_strategies, cs.progress_notes, cs.important_context,
+                       cs.message_count, cs.created_at, cs.updated_at
+                FROM conversation_summaries cs
+                LEFT JOIN access_codes ac ON ac.code = cs.user_id
+                WHERE cs.user_id = %s
+                  AND cs.summary_date >= CURRENT_DATE - INTERVAL '%s days'
+                  AND (ac.chat_visible_from IS NULL OR cs.summary_date >= ac.chat_visible_from::date)
+                ORDER BY cs.summary_date DESC
             ''', (user_id, days))
 
             rows = cursor.fetchall()
@@ -4125,16 +4139,23 @@ class PostgreSQLDatabase(DatabaseInterface):
             return False
 
     def get_user_insights(self, user_id: str) -> Dict[str, Any]:
-        """Get user insights from PostgreSQL"""
+        """Get user insights from PostgreSQL.
+        Honors access_codes.chat_visible_from: if the access code has a cutoff
+        and the insights row hasn't been updated since the cutoff, return empty
+        so the LLM doesn't receive stale pre-reset context.
+        """
         conn = None
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
 
             cursor.execute('''
-                SELECT life_situation, emotional_triggers, coping_that_helps,
-                       interests_hobbies, support_system, goals_aspirations
-                FROM user_insights WHERE user_id = %s
+                SELECT ui.life_situation, ui.emotional_triggers, ui.coping_that_helps,
+                       ui.interests_hobbies, ui.support_system, ui.goals_aspirations
+                FROM user_insights ui
+                LEFT JOIN access_codes ac ON ac.code = ui.user_id
+                WHERE ui.user_id = %s
+                  AND (ac.chat_visible_from IS NULL OR ui.updated_at > ac.chat_visible_from)
             ''', (user_id,))
 
             row = cursor.fetchone()
