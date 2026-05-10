@@ -805,9 +805,24 @@ def chat_stream():
         # user_id IS the access_code (same as process_message)
         access_code = user_id
 
-        # Initialize session if needed
-        if user_id not in user_sessions:
-            user_sessions[user_id] = {'messages': []}
+        # Initialize session for this worker. With multiple gunicorn workers,
+        # a request can land on a worker that has no in-memory cache for this
+        # user — we must hydrate from the DB so the LLM sees prior turns.
+        # (Without this, students get "forgetful" replies — see the practice-Q&A
+        # bug where the bot didn't remember its own preceding question.)
+        if user_id not in user_sessions or len(user_sessions[user_id].get('messages', [])) == 0:
+            try:
+                db = get_database()
+                chat_history = db.get_chat_history(user_id, limit=10)
+                session_messages = [
+                    {"role": msg['role'], "content": msg['content']}
+                    for msg in chat_history
+                ]
+                logger.info(f"chat_stream: hydrated session for {user_id} with {len(session_messages)} messages from DB")
+            except Exception as e:
+                logger.error(f"Error loading chat history in chat_stream: {e}")
+                session_messages = []
+            user_sessions[user_id] = {'messages': session_messages}
 
         # Save user message to database first
         try:
