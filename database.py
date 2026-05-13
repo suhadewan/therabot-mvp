@@ -1803,6 +1803,30 @@ class SQLiteDatabase(DatabaseInterface):
         logger.warning("manual_flag_message not implemented for SQLite")
         return False
 
+    def flag_latest_user_message(self, access_code: str, flag_type: str) -> bool:
+        """SQLite equivalent — tag the latest 'normal' user message for this code."""
+        try:
+            message_type = 'crisis' if flag_type in ('SI', 'SH', 'HI') else 'safety_concern'
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE chat_messages
+                SET message_type = ?
+                WHERE id = (
+                    SELECT id FROM chat_messages
+                    WHERE access_code = ? AND role = 'user' AND message_type = 'normal'
+                    ORDER BY timestamp DESC
+                    LIMIT 1
+                )
+            ''', (message_type, access_code))
+            updated = cursor.rowcount
+            conn.commit()
+            conn.close()
+            return updated > 0
+        except Exception as e:
+            logger.error(f"Error in flag_latest_user_message (SQLite): {e}")
+            return False
+
     def save_user_consent(self, user_id: str, access_code: str, consent_accepted: bool) -> bool:
         """Save user's consent decision to SQLite (by access_code)"""
         try:
@@ -4363,6 +4387,39 @@ class PostgreSQLDatabase(DatabaseInterface):
             if conn:
                 self._return_connection(conn)
 
+    def flag_latest_user_message(self, access_code: str, flag_type: str) -> bool:
+        """Tag the most recent USER message for this access_code with the right
+        message_type so the reviewer UI shows it as flagged. SI/SH/HI -> 'crisis',
+        everything else (EA, SA, moderation) -> 'safety_concern'. Only overwrites
+        rows still marked 'normal' to avoid clobbering manual flags."""
+        conn = None
+        try:
+            message_type = 'crisis' if flag_type in ('SI', 'SH', 'HI') else 'safety_concern'
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE chat_messages
+                SET message_type = %s
+                WHERE id = (
+                    SELECT id FROM chat_messages
+                    WHERE access_code = %s AND role = 'user' AND message_type = 'normal'
+                    ORDER BY timestamp DESC
+                    LIMIT 1
+                )
+            ''', (message_type, access_code))
+            updated = cursor.rowcount
+            conn.commit()
+            cursor.close()
+            if updated:
+                logger.info(f"flag_latest_user_message: tagged latest user msg for {access_code} as {message_type} (flag_type={flag_type})")
+            return updated > 0
+        except Exception as e:
+            logger.error(f"Error in flag_latest_user_message: {e}")
+            return False
+        finally:
+            if conn:
+                self._return_connection(conn)
+
     def save_user_consent(self, user_id: str, access_code: str, consent_accepted: bool) -> bool:
         """Save user's consent decision to PostgreSQL (by access_code)"""
         try:
@@ -5277,6 +5334,10 @@ class DatabaseManager:
     def manual_flag_message(self, message_id: int, access_code: str, flag_type: str) -> bool:
         """Manually flag a message from the reviewer portal"""
         return self.database.manual_flag_message(message_id, access_code, flag_type)
+
+    def flag_latest_user_message(self, access_code: str, flag_type: str) -> bool:
+        """Tag the latest user message as flagged so the reviewer UI shows it."""
+        return self.database.flag_latest_user_message(access_code, flag_type)
 
     def save_user_consent(self, user_id: str, access_code: str, consent_accepted: bool) -> bool:
         """Save user's consent decision"""

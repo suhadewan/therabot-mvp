@@ -204,6 +204,9 @@ def run_moderation_check_background(user_id: str, access_code: str, message_text
                     user_agent=user_agent
                 )
 
+                # Tag the user's triggering message for reviewer UI highlighting
+                db.flag_latest_user_message(access_code, crisis_category)
+
                 # Send email notification
                 send_flag_notification_async(access_code, message_text, crisis_category, emergency_contact)
             else:
@@ -219,6 +222,9 @@ def run_moderation_check_background(user_id: str, access_code: str, message_text
                     ip_address=ip_address,
                     user_agent=user_agent
                 )
+
+                # Tag the user's triggering message for reviewer UI highlighting
+                db.flag_latest_user_message(access_code, "moderation")
 
                 # Send email notification
                 send_flag_notification_async(access_code, message_text, "moderation", emergency_contact)
@@ -385,6 +391,9 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
             )
             print(f"DEBUG: Crisis logged with flag: {flag_type}")
 
+            # Tag the user's triggering message so the reviewer UI highlights it
+            db.flag_latest_user_message(access_code, flag_type)
+
             # Send email notification to on-call reviewer
             emergency_contact = db.get_emergency_contact(user_id)
             send_flag_notification_async(access_code, message_text, flag_type, emergency_contact)
@@ -535,7 +544,9 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
             log_timing("Guardrails skipped (disabled for speed)")
 
 
-        # Save assistant response to database
+        # Save assistant response to database. Always 'normal' here —
+        # the flag belongs to the USER's triggering message (tagged via
+        # flag_latest_user_message above), not to the LLM's follow-up reply.
         try:
             db = get_database()
             db.save_chat_message(
@@ -543,7 +554,7 @@ def process_message(user_id: str, message_text: str, ip_address: str = None, use
                 access_code=access_code,
                 role="assistant",
                 content=final_response,
-                message_type="crisis" if is_crisis else "normal"
+                message_type="normal"
             )
             log_timing("Assistant response saved to DB")
         except Exception as e:
@@ -860,6 +871,9 @@ def chat_stream():
                     ip_address=ip_address,
                     user_agent=user_agent
                 )
+
+                # Tag the user's triggering message for reviewer UI highlighting
+                db.flag_latest_user_message(access_code, flag_type)
 
                 # Send email notification to on-call reviewer
                 emergency_contact = db.get_emergency_contact(user_id)
